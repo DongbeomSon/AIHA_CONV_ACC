@@ -1,0 +1,13 @@
+./.ipcache
+./.run
+./Xil
+./data
+./ip_generation
+*.log
+./test_dir
+./vivado_pack_krnl_project
+./xsim.test_dir
+*.wcfg
+*.wdb
+*.pb
+*.run_summary
