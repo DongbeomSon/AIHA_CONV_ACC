@@ -44,7 +44,7 @@ tile_length = 16
 num_tile = 64//tile_length
 
 ifm_num = 0
-with open("ifm_d_c%dxh%dxw%d.txt"%(ic, ih, iw), "w") as f:
+with open("ifm.txt", "w") as f:
     for ii in range(13):
         for jj in range(num_tile):
             for c in range(ic):
@@ -81,7 +81,7 @@ with open("ifm.dat", "wb") as f:
 print("---ifm_num--- %d" % ifm_num)
 ifm_num = 0
 
-with open("wgt_d_co%dxci%dxk%dxk%d.txt"%(oc, ic, kk, kk), "w") as f:
+with open("wgt.txt", "w") as f:
     for i in range(oc):
         for ii in range(13):
             for jj in range(num_tile):
@@ -106,3 +106,17 @@ with open("wgt.dat", "wb") as f:
                             f.write(l.astype('int8').tobytes())
                             ifm_num += 1
 print("---wgt_num--- %d" % ifm_num)
+
+ofm = 0
+with open("ofm.txt", "w") as f:
+    for i in range(oc):
+        for j in range(oh):
+            for k in ofm_np[0, i, j, :]:
+                s = str(k) + ","
+                f.write(s)
+                ofm += 1
+            f.write("\n")
+        f.write("\n")
+print("---ofm_num--- %d" % ofm)
+
+
