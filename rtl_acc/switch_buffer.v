@@ -2,7 +2,7 @@ module switch_buffer #(
     parameter DATA_WIDTH = 512,
     parameter DATA_NUM = 64,
     parameter DATA_NUM_BYTE = 63232,
-    parameter FIFO_ADDR_WIDTH = 16,
+    parameter FIFO_ADDR_WIDTH = 10,
     parameter BURST_LENGTH = 4,
     parameter INIT_LOOP = DATA_NUM_BYTE/DATA_NUM/BURST_LENGTH
     )(
@@ -39,14 +39,6 @@ module switch_buffer #(
     wire    [511:0] in_fifo0_pop_data;  
     wire    [FIFO_ADDR_WIDTH:0]  in_fifo0_data_cnt;
 
-    wire            in_fifo1_full;
-    wire            in_fifo1_empty;
-    wire            in_fifo1_push_req;
-    wire    [511:0] in_fifo1_push_data;
-    wire            in_fifo1_pop_req;
-    wire    [511:0] in_fifo1_pop_data;  
-    wire    [FIFO_ADDR_WIDTH:0]  in_fifo1_data_cnt;
-
     FifoType0 #(.data_width (DATA_WIDTH), .addr_bits (FIFO_ADDR_WIDTH)) fifo_0 (
         .CLK        (clk),
         .nRESET     (rst_n),
@@ -61,26 +53,8 @@ module switch_buffer #(
         .ERROR      (),
         .DATA_CNT   (in_fifo0_data_cnt)
     );
-
-    FifoType0 #(.data_width (DATA_WIDTH), .addr_bits (FIFO_ADDR_WIDTH)) fifo_1 (
-        .CLK        (clk),
-        .nRESET     (rst_n),
-        .PUSH_REQ   (in_fifo1_push_req),
-        .POP_REQ    (in_fifo1_pop_req),
-        .PUSH_DATA  (in_fifo1_push_data),
-        .CLEAR      (end_conv),
-  
-        .POP_DATA   (in_fifo1_pop_data),
-        .EMPTY      (in_fifo1_empty),
-        .FULL       (in_fifo1_full),
-        .ERROR      (),
-        .DATA_CNT   (in_fifo1_data_cnt)
-    );
-
-    // assign in_fifo0_push_req = valid & ready & !sw_store;
-    // assign in_fifo1_push_req = valid & ready & sw_store;
     reg r_pop_req;
-    assign in_fifo0_push_req = buf_rdy ? r_pop_req : valid & ready;
+    assign in_fifo0_push_req = buf_rdy ? pop_req : valid & ready;
 
    
 

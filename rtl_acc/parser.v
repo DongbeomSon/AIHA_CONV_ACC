@@ -17,7 +17,6 @@ module parser #(
 
     reg [OUTPUT_WIDTH-1:0] r_parse [MAX_CNT-1:0];
     reg [OUTPUT_WIDTH-1:0] r_parse_out;
-    reg [INPUT_WIDTH-1:0] r_fm;
 
     integer i;
     always @(*) begin
@@ -30,31 +29,17 @@ module parser #(
         r_parse_out <= r_parse[cnt];
     end
 
-
-    reg r_input_req;
     assign parse_out = r_parse_out;
-    reg r_init_word;
 
     always @(posedge clk, negedge rst_n) begin
         if(!rst_n) begin
             input_req <= 0;
             r_parse_out <= 0;
-            r_input_req <= 0;
             cnt <= 0;
-            r_init_word <= 0;
         end else begin
-            if(init_word) begin
-                // input_req <= 1;
-                // r_init_word <= 1;
-            end else if (ifm_read) begin
-                //input_req <= (cnt == MAX_CNT-2) ? 1 : 0;
+            if (ifm_read) begin
                 input_req <= (cnt == MAX_CNT - 2) ? 1 : 0;
                 cnt <= (cnt == MAX_CNT-1) ? 0 : cnt + 1;
-                // r_input_req <= r_input_req ? 0 : input_req;
-                // r_fm <= r_input_req ? fm : r_fm;
-            end else if(r_init_word) begin
-                input_req <= 0;
-                // r_fm <= fm;
             end
         end
     end
