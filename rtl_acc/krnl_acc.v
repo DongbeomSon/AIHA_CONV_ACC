@@ -399,11 +399,11 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
 
 
     .axis_slv_ifm_tvalid    (ifm_axis_tvalid),
-    .axis_slv_ifm_tdata    (ifm_axis_tdata),
+    .axis_slv_ifm_tdata    (ifm_axis_tdata_little_endian),  // is little endian?
     .axis_slv_ifm_tready    (ifm_axis_tready),
 
     .axis_slv_wgt_tvalid    (wgt_axis_tvalid),
-    .axis_slv_wgt_tdata    (wgt_axis_tdata),
+    .axis_slv_wgt_tdata    (wgt_axis_tdata_little_endian), // is little endian?
     .axis_slv_wgt_tready    (wgt_axis_tready),
 
     .axis_mst_ofm_tvalid    (ofm_axis_tvalid),
