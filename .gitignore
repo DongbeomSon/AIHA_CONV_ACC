@@ -12,3 +12,6 @@ test_dir/
 *.wdb
 *.pb
 *.run_summary
+*.str
+*.jou
+*.dat
