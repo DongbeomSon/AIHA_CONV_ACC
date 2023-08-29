@@ -9,9 +9,9 @@ module krnl_acc #(
   parameter integer DATA_WIDTH = 512,
 parameter integer WORD_BYTE = DATA_WIDTH/8,
 
-    parameter IFM_BUFF_WORD_NUM = 64,
+    parameter IFM_BUFF_WORD_NUM = 4,
     parameter IFM_BUFF_ADDR_WIDTH  = $clog2(IFM_BUFF_WORD_NUM) + 1,
-    parameter WGT_BUFF_WORD_NUM = 64,
+    parameter WGT_BUFF_WORD_NUM = 4,
     parameter WGT_BUFF_ADDR_WIDTH  = $clog2(WGT_BUFF_WORD_NUM) + 1
 )
 (
