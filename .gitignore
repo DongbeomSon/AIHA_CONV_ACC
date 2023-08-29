@@ -1,6 +1,6 @@
 .ipcache/
 .run/
-Xil/
+.Xil/
 data/
 ip_generation/
 *.log
