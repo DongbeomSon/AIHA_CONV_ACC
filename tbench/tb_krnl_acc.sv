@@ -499,12 +499,13 @@ initial  begin : main_test_routine
     reg signed [7:0] sibal;
 
 //    file_ptr = $fopen("./script/test/ifm.dat", "rb");
-    file_ptr = $fopen("../common/ifm.dat", "rb");
+//    file_ptr = $fopen("../common/ifm.dat", "rb");
+    file_ptr = $fopen("./data/ifm.dat", "rb");
     $display ("IFM_DATA SIZE : %d" , `IFM_LEN);
     temp = $fread(ifm_data, file_ptr);
     $fclose(file_ptr);    
     sibal = ifm_data[0][7:0];
-    file_ptr = $fopen("../common/wgt.dat", "rb"); 
+    file_ptr = $fopen("./data/wgt.dat", "rb");
       $display ("WGT_DATA SIZE : %d" , `WGT_LEN);
     temp = $fread(wgt_data, file_ptr);
     $fclose(file_ptr); 
@@ -542,7 +543,7 @@ initial  begin : main_test_routine
   
 
     //Data compare
-    fp_w = $fopen("./conv_acc_out.txt");
+    fp_w = $fopen("./data/conv_acc_out.txt");
             toc = 0;
             toh = 0;
             tow = 0;

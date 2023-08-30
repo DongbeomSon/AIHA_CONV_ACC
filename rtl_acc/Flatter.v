@@ -83,7 +83,7 @@ module flatter #(
 
     always @(*) begin
         wmst_addr = wmst_offset + addr_cnt * WORD_BYTE; // 64 byte = 512bit
-        wmst_xfer_size = WORD_BYTE; //addr_cnt_temp * WORD_BYTE;
+        wmst_xfer_size = WORD_BYTE * 2; //addr_cnt_temp * WORD_BYTE;
     end
 
 
@@ -104,8 +104,8 @@ module flatter #(
         end else begin
             if(wmst_done) begin
                 flag_wmst_req <= 0;
-                addr_cnt <= addr_cnt + 1;
-            end else if(out_fifo_data_cnt > 0 & !flag_wmst_req) begin
+                addr_cnt <= addr_cnt + 2;
+            end else if(out_fifo_data_cnt > 1 & !flag_wmst_req) begin
                 flag_wmst_req <= 1;
                 r_wmst_req <= 1;
             end else if (r_wmst_req) begin

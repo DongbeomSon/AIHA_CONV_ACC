@@ -1,5 +1,5 @@
 import csv
-golden_result = csv.reader(open("./ofm_dec_c8xh61xw61.txt"), delimiter=',')
+golden_result = csv.reader(open("./ofm.txt"), delimiter=',')
 my_result     = csv.reader(open("./conv_acc_out.txt"), delimiter=' ')
 
 golden_vec = []
