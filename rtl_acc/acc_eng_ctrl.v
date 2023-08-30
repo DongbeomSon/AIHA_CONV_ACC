@@ -43,7 +43,6 @@ module acc_eng_ctrl #(
     always @ (posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             eng_busy <= 1'b0;
-            r_end_conv <= 1'b0;
             op_start <= 1'b0;
         end else if (op_start)
             op_start <= 1'b0;
@@ -76,6 +75,7 @@ module acc_eng_ctrl #(
         else if (r_end_conv && wmst_done) begin                 // when any CBC engine finish axi master write, assert ap_done
             ap_done <= 1'b1;
             eng_busy <= 0;
+            r_end_conv <= 0;
         end
     end
 

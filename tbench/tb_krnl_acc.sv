@@ -553,54 +553,43 @@ initial  begin : main_test_routine
             thcnt = 0;
             // if (oc <= `OFM_C-1) begin
 //            if(!end_op) begin
-            for(index = 0; index < `OFM_LEN_WORD*`GROUP_NUM; index++) begin
-              for(i = 0; i < 16; i=i+1) begin
-                ofm[oc][oh][i+tw*`TI] = ofm_data[index][32*(i+1)-1 -: 32];
-                if (ofm[oc][oh][i+tw*`TI] < 0) $display("fuck");
-              end
-              oh = oh + 1;
-              thcnt = thcnt + 1;
-                    if (thcnt == 5) begin
-                        thcnt = 0;
-                        tw = tw + 1;
-                        oh = oh - 5;
-                        if (tw == 4) begin
-                            tw = 0;
-                            oh = oh + 5;
-                        end
-                    end
-                    if (oh == 65) begin
-                        oh = 0;
-                        oc = oc + 1;
-                        $display("\033[33m[ConvKernel: ] Computing channel: %d\033[0m", oc);
-                    end
-            end
-
-            for (toc=0; toc < `OFM_C; toc = toc + 1) begin
-                $fwrite(fp_w, "\n\n");
-                for (toh=0; toh < `OFM_H; toh = toh + 1) begin
-                    for (tow=0; tow < `OFM_W; tow = tow + 1) begin
-                        $fwrite(fp_w, "%d ", ofm[toc][toh][tow]);
-                        if (tow == `OFM_W-1) begin
-                            $fwrite(fp_w, "\n");
-                        end
-                    end
+            for(j=0; j < `GROUP_NUM; j++) begin
+              for(index = 0; index < `OFM_LEN_WORD; index++) begin
+                for(i = 0; i < 16; i=i+1) begin
+                  ofm[oc][oh][i+tw*`TI] = ofm_data[`OFM_LEN_WORD*j + index][32*(i+1)-1 -: 32];
                 end
+                oh = oh + 1;
+                thcnt = thcnt + 1;
+                      if (thcnt == 5) begin
+                          thcnt = 0;
+                          tw = tw + 1;
+                          oh = oh - 5;
+                          if (tw == 4) begin
+                              tw = 0;
+                              oh = oh + 5;
+                          end
+                      end
+                      if (oh == 65) begin
+                          oh = 0;
+                          oc = oc + 1;
+                          $display("\033[33m[ConvKernel: ] Computing channel: %d\033[0m", oc);
+                      end
+              end
+
+              for (toc=0; toc < `OFM_C; toc = toc + 1) begin
+                  $fwrite(fp_w, "\n\n");
+                  for (toh=0; toh < `OFM_H; toh = toh + 1) begin
+                      for (tow=0; tow < `OFM_W; tow = tow + 1) begin
+                          $fwrite(fp_w, "%d ", ofm[toc][toh][tow]);
+                          if (tow == `OFM_W-1) begin
+                              $fwrite(fp_w, "\n");
+                          end
+                      end
+                  end
+              end
+                      $display("\033[32m[ConvKernel: %d] Finish writing results to conv_acc_out.txt\033[0m", j); 
             end
-                    $display("\033[32m[ConvKernel: ] Finish writing results to conv_acc_out.txt\033[0m");
-                    $fclose(fp_w);
-
-
-    // // Data compare        
-    // if (words_compare(cipher_ecb_data, output_data, `WORD_NUM*`GROUP_NUM)) begin
-    //   $write("%c[1;32m",27);
-    //   $display($time,, "      [CHECK] Data check SUCCEED!");
-    //   $write("%c[0m",27); 
-    // end else begin
-    //   $write("%c[1;31m",27);
-    //   $display($time,, "      [CHECK] Data check FAIL!");
-    //   $write("%c[0m",27); 
-    // end    
+            $fclose(fp_w);
 
     #1000 $finish;
 

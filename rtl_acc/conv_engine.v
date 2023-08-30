@@ -160,7 +160,8 @@ module conv_engine #(
             start_conv_pulse <= 0;
         end else begin
             start_conv_pulse <= r_start_conv ? 0 : start_conv;
-            r_start_conv <= r_start_conv ? 1 : start_conv;
+            r_start_conv <= end_conv ? 0 : 
+                            r_start_conv ? 1 : start_conv;
         end
     end
 
