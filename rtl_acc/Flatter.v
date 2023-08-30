@@ -87,19 +87,20 @@ module flatter #(
     end
 
 
-    always @(posedge clk, negedge rst_n) begin
-        if(!rst_n) begin
-            addr_cnt <= 0;
-        end else begin
-            addr_cnt <= start_conv ? 0 : out_fifo_pop_req ? addr_cnt + 1 : addr_cnt;
-        end
-    end
+    // always @(posedge clk, negedge rst_n) begin
+    //     if(!rst_n) begin
+    //         addr_cnt <= 0;
+    //     end else begin
+    //         addr_cnt <= start_conv ? 0 : out_fifo_pop_req ? addr_cnt + 1 : addr_cnt;
+    //     end
+    // end
 
     reg [31:0] wcnt;
     always @(posedge clk, negedge rst_n) begin
         if (!rst_n) begin
             r_wmst_req <=0;
             flag_wmst_req <= 0;
+            addr_cnt <= 0;
         end else begin
             if(wmst_done) begin
                 flag_wmst_req <= 0;
@@ -147,6 +148,18 @@ module flatter #(
                     cnt <= (ofm_port0_v | ofm_port1_v) ? cnt + 1 : cnt;
                     r_port_v <= ofm_port0_v ^ ofm_port1_v;
             end
+        end
+    end
+
+//for debug
+
+    reg [31:0] p_ofm0 [0:15];
+    reg [31:0] p_ofm1 [0:15];
+    integer i;
+    always @(*) begin
+        for(i = 0; i < 16; i=i+1) begin
+            p_ofm0[i] <= ofm0[i*32 +: 32];
+            p_ofm1[i] <= ofm1[i*32 +: 32];
         end
     end
 

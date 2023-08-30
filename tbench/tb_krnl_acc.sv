@@ -498,13 +498,13 @@ initial  begin : main_test_routine
 
     reg signed [7:0] sibal;
 
-    file_ptr = $fopen("./script/test/ifm.dat", "rb");
+//    file_ptr = $fopen("./script/test/ifm.dat", "rb");
+    file_ptr = $fopen("../common/ifm.dat", "rb");
     $display ("IFM_DATA SIZE : %d" , `IFM_LEN);
     temp = $fread(ifm_data, file_ptr);
     $fclose(file_ptr);    
     sibal = ifm_data[0][7:0];
-    $display ("fuck you endian %d" , sibal);
-    file_ptr = $fopen("./script/test/wgt.dat", "rb");
+    file_ptr = $fopen("../common/wgt.dat", "rb"); 
       $display ("WGT_DATA SIZE : %d" , `WGT_LEN);
     temp = $fread(wgt_data, file_ptr);
     $fclose(file_ptr); 
@@ -555,6 +555,7 @@ initial  begin : main_test_routine
             for(index = 0; index < `OFM_LEN_WORD*`GROUP_NUM; index++) begin
               for(i = 0; i < 16; i=i+1) begin
                 ofm[oc][oh][i+tw*`TI] = ofm_data[index][32*(i+1)-1 -: 32];
+                if (ofm[oc][oh][i+tw*`TI] < 0) $display("fuck");
               end
               oh = oh + 1;
               thcnt = thcnt + 1;

@@ -120,3 +120,40 @@ with open("ofm.txt", "w") as f:
 print("---ofm_num--- %d" % ofm)
 
 
+#write byte ver
+with open("ifm_bin.txt", "w") as f:
+    for ii in range(13):
+        for jj in range(num_tile):
+            for c in range(ic):
+                for j in range(tile_length + 3):
+                    col = jj*tile_length + j
+                    for i in range(8):
+                        row = ii*5+i
+                        # print(row, c, ii)
+                        k = ifm_np[0, c, row, col] if ((row < 64) and (col < 64))else 0
+                        s = np.binary_repr(k, 8) + " "
+                        f.write(s)
+                        ifm_num += 1
+                    f.write("\n")
+            f.write("\n")    
+        f.write("\n")
+    f.write("\n")
+
+print("---ifm_num--- %d" % ifm_num)
+ifm_num = 0
+
+with open("wgt_bin.txt", "w") as f:
+    for i in range(oc):
+        for ii in range(13):
+            for jj in range(num_tile):
+                for j in range(ic):
+                    for k in range(kk):
+                        for l in weight_np[i, j, :, k]:
+                            s = np.binary_repr(l, 8) + " "
+                            f.write(s)
+                            ifm_num += 1
+                        f.write("\n")
+                    f.write("\n")
+                f.write("\n")
+            f.write("\n")
+        f.write("\n")
