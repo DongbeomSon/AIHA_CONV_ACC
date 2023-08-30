@@ -11,7 +11,7 @@ module flatter #(
     input [24:0] ofm_port0,
     input [24:0] ofm_port1,
 
-    input start_conv,
+    input end_conv,
 
     output [511:0] tdata,
     input ready,
@@ -21,7 +21,8 @@ module flatter #(
     input wmst_done,
     output wmst_req,
     output reg [63:0] wmst_addr,
-    output reg [63:0] wmst_xfer_size
+    output reg [63:0] wmst_xfer_size,
+    output write_buffer_wait
 );
 
     reg [4:0] cnt;
@@ -56,6 +57,7 @@ module flatter #(
     reg [511:0] ofm_temp1;
     reg p_req;
 
+    assign write_buffer_wait = !out_fifo_empty;
     assign tdata = out_fifo_pop_data;
     assign valid = !out_fifo_empty;
     assign out_fifo_pop_req = ready & valid;
@@ -94,6 +96,14 @@ module flatter #(
     //         addr_cnt <= start_conv ? 0 : out_fifo_pop_req ? addr_cnt + 1 : addr_cnt;
     //     end
     // end
+    reg r_end_conv;
+    always @(posedge clk, negedge rst_n) begin
+        if(!rst_n) begin
+            r_end_conv <= 0;
+        end else begin
+            if(end_conv) r_end_conv <= 1;
+        end
+    end
 
     reg [31:0] wcnt;
     always @(posedge clk, negedge rst_n) begin
@@ -104,7 +114,12 @@ module flatter #(
         end else begin
             if(wmst_done) begin
                 flag_wmst_req <= 0;
-                addr_cnt <= addr_cnt + 2;
+                if(r_end_conv & out_fifo_empty) begin
+                    addr_cnt <= 0;
+                    r_end_conv <= 0;
+                end else begin
+                    addr_cnt <= addr_cnt + 2;
+                end
             end else if(out_fifo_data_cnt > 1 & !flag_wmst_req) begin
                 flag_wmst_req <= 1;
                 r_wmst_req <= 1;
@@ -150,6 +165,7 @@ module flatter #(
             end
         end
     end
+
 
 //for debug
 
