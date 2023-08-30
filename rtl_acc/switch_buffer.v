@@ -28,8 +28,6 @@ module switch_buffer #(
 
     output reg buf_rdy
 );
-    reg sw_store;
-    reg sw_load;
 
     wire            in_fifo0_full;
     wire            in_fifo0_empty;
@@ -67,21 +65,12 @@ module switch_buffer #(
     end
 
     assign in_fifo0_pop_req = pop_req;
- //   assign in_fifo1_pop_req = pop_req & sw_load;
 
     assign in_fifo0_push_data = buf_rdy ? in_fifo0_pop_data : tdata;
-//    assign in_fifo1_push_data = tdata;
 
- //   assign o_data = !sw_load ? in_fifo0_pop_data : in_fifo1_pop_data;
     assign o_data = in_fifo0_pop_data;
 
-//    assign ready = sw_store ? !in_fifo1_full : !in_fifo0_full;
     assign ready = !in_fifo0_full;
-
-    // always @(*) begin
-    //     if(!sw && (in_fifo0_data_cnt == DATA_NUM)) sw <= 1;
-    //     else if(sw && (in_fifo1_data_cnt == DATA_NUM)) sw <= 0;
-    // end
 
     reg rmst_rised;
     reg [31:0] addr_cnt;
@@ -99,14 +88,12 @@ module switch_buffer #(
             init_word_cnt <= 0;
         end else begin
             if(rmst_done) begin
- //               addr_cnt <= (addr_cnt == MAX_BYTE-1) ? 0 : addr_cnt + 1;
                 addr_cnt <= addr_cnt + 1;
                 init_word_cnt <= init_word_cnt + 1;
-            end
-                else begin
+            end else begin
                     addr_cnt <= end_conv ? 0 : addr_cnt;
                     init_word_cnt <= end_conv ? 0 : init_word_cnt;
-                end
+            end
         end
     end
 
@@ -116,12 +103,11 @@ module switch_buffer #(
             rmst_req <= 0;
             rmst_rised <= 0;
             buf_rdy <= 0;
-            sw_store <= 0;
-            sw_load <= 0;
             r_op_start <= 0;
         end else begin
 
-            if(op_start) begin
+            if(end_conv) r_op_start <=0;
+            else if(op_start) begin
                 rmst_req <= 1;
                 rmst_rised <= 1;
                 r_op_start <= 1;
@@ -130,10 +116,8 @@ module switch_buffer #(
                 rmst_req <= 0;
             else if (r_op_start) begin
                 if (!buf_rdy & !rmst_rised) begin
-    //                if(!(in_fifo0_empty & in_fifo1_empty)) begin
-                        rmst_rised <= 1;
-                        rmst_req <= 1;
-    //                end
+                    rmst_rised <= 1;
+                    rmst_req <= 1;
                 end else if (rmst_done) begin
                     rmst_rised <= 0;
                 end
@@ -141,28 +125,6 @@ module switch_buffer #(
 
             buf_rdy <= end_conv ? 0:
                         (init_word_cnt == INIT_LOOP) ? 1 : buf_rdy;
- //                       rmst_done ? 1 : buf_rdy;
-
         end
-//             if(op_start) begin
-//                 rmst_req <= 1;
-//                 rmst_rised <= 1;
-//                 r_op_start <= 1;
-//             end
-//             else if (rmst_req) 
-//                 rmst_req <= 0;
-//             else if (!buf_rdy & !rmst_rised) begin
-// //                if(!(in_fifo0_empty & in_fifo1_empty)) begin
-//                     rmst_rised <= 1;
-//                     rmst_req <= 1;
-// //                end
-//             end else if (rmst_done) begin
-//                 rmst_rised <= 0;
-//             end
-
-//             buf_rdy <= end_conv ? 0:
-//                         (init_word_cnt == INIT_LOOP) ? 1 : buf_rdy;
-//  //                       rmst_done ? 1 : buf_rdy;
-//         end
     end
 endmodule
