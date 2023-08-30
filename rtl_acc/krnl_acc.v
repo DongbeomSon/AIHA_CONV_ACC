@@ -318,8 +318,8 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
         end
     endgenerate
 
-
-  assign ofm_xfer_size_in_bytes = 64;
+  wire [63:0] ofm_xfer_size;
+  assign ofm_xfer_size_in_bytes = ofm_xfer_size;
 // instantiation of axi write master
   axi_write_master #(
     .C_M_AXI_ADDR_WIDTH     (64),
@@ -357,8 +357,11 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
         // data endian conversion
     generate
         genvar j;
-        for (j = 0; j < WORD_BYTE; j = j + 1) begin : output_endian_convert
-            assign ofm_axis_tdata_little_endian[j*8+7 : j*8] = ofm_axis_tdata[(WORD_BYTE-1-j)*8+7 : (WORD_BYTE-1-j)*8];
+
+        for (i = 0; i < WORD_BYTE/4; i = i+1) begin : output_endian_convert_0
+          for (j = 0; j < 4; j = j + 1) begin : output_endian_convert_1  //output 32bit
+              assign ofm_axis_tdata_little_endian[i*32 + j*8+7 : i*32 + j*8] = ofm_axis_tdata[(i+1)*32-(j+1)*8+7 : (i+1)*32-(j+1)*8];
+          end
         end
     endgenerate
 
@@ -399,11 +402,11 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
 
 
     .axis_slv_ifm_tvalid    (ifm_axis_tvalid),
-    .axis_slv_ifm_tdata    (ifm_axis_tdata_little_endian),  // is little endian?
+    .axis_slv_ifm_tdata    (ifm_axis_tdata),  // is little endian?
     .axis_slv_ifm_tready    (ifm_axis_tready),
 
     .axis_slv_wgt_tvalid    (wgt_axis_tvalid),
-    .axis_slv_wgt_tdata    (wgt_axis_tdata_little_endian), // is little endian?
+    .axis_slv_wgt_tdata    (wgt_axis_tdata), // is little endian?
     .axis_slv_wgt_tready    (wgt_axis_tready),
 
     .axis_mst_ofm_tvalid    (ofm_axis_tvalid),
@@ -411,7 +414,10 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .axis_mst_ofm_tready    (ofm_axis_tready),
 
     .ofm_req (ofm_start),
-    .ofm_xfer_addr(ofm_addr_offset),
+    .ofm_addr_base(ofm_addr_base),
+    .ofm_done (ofm_done),
+    .ofm_offset(ofm_addr_offset),
+    .ofm_xfer_size(ofm_xfer_size),
 
     .ifm_req (ifm_start),
     .ifm_addr_base(ifm_addr_base),

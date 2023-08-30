@@ -45,11 +45,16 @@ module conv_engine #(
     output  [511:0] axis_mst_ofm_tdata,
 
 // global memory write master control    
-    output     ofm_req,               // constant wmst_req, cleared by wmst_req_clear
-    output [63:0]  ofm_xfer_addr, // reg?
+    output ofm_req,
+    input [63:0] ofm_addr_base,
+    input ofm_done,
+    output [63:0]  ofm_offset,  //reg?
+    output [63:0]  ofm_xfer_size,
+
 //    output  [63:0]  wmst_xfer_size,
 
 //global memroy read master control, req, done
+
     output ifm_req,
     input [63:0] ifm_addr_base,
     input ifm_done,
@@ -241,14 +246,16 @@ module conv_engine #(
         .ofm_port1(ofm_port1),
 
         .start_conv(start_conv_pulse),
-        .wmst_offset(write_addr),
 
         .tdata(axis_mst_ofm_tdata),
         .ready(axis_mst_ofm_tready),
         .valid(axis_mst_ofm_tvalid),
 
+        .wmst_offset(ofm_addr_base),
+        .wmst_done(ofm_done),
         .wmst_req(ofm_req),
-        .wmst_addr(wmst_addr)
+        .wmst_addr(ofm_offset),
+        .wmst_xfer_size(ofm_xfer_size)
     );
 
     assign ofm_xfer_addr = wmst_addr;

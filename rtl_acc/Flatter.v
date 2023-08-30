@@ -1,4 +1,7 @@
-module flatter(
+module flatter #(
+    parameter WORD_BYTE = 64
+    )
+    (
     input clk,
     input rst_n,
 
@@ -9,17 +12,19 @@ module flatter(
     input [24:0] ofm_port1,
 
     input start_conv,
-    input [63:0] wmst_offset,
 
     output [511:0] tdata,
     input ready,
     output valid,
 
+    input [63:0] wmst_offset,
+    input wmst_done,
     output wmst_req,
-    output reg [63:0] wmst_addr
+    output reg [63:0] wmst_addr,
+    output reg [63:0] wmst_xfer_size
 );
 
-    reg [3:0] cnt;
+    reg [4:0] cnt;
     reg [511:0] ofm0;
     reg [511:0] ofm1;
 
@@ -47,74 +52,122 @@ module flatter(
         .DATA_CNT   (out_fifo_data_cnt)
     );
 
-    reg [511:0] ofm_temp;
+    reg [511:0] ofm_temp0;
+    reg [511:0] ofm_temp1;
     reg p_req;
 
     assign tdata = out_fifo_pop_data;
     assign valid = !out_fifo_empty;
     assign out_fifo_pop_req = ready & valid;
     assign out_fifo_push_req = p_req;
-    assign out_fifo_push_data = ofm_temp;
+    assign out_fifo_push_data = ofm_temp0;
 
     reg [2:0] flat_done;
 
-    localparam WORD_READY = 2;
+    localparam IDLE = 0;
+    localparam WORD_READY_1 = 1;
+    localparam WORD_READY_2 = 2;
     localparam LAST_WORD = 3;
+    localparam PREQ = 4;
+    localparam WREQ = 5;
+
     
 
     reg r_wmst_req;
-
+    reg flag_wmst_req;
     assign wmst_req = r_wmst_req;
 
 
     reg [31:0] addr_cnt;
+    reg [31:0] addr_cnt_temp;
 
     always @(*) begin
-        wmst_addr = wmst_offset + addr_cnt * 64; // 64 byte = 512bit
+        wmst_addr = wmst_offset + addr_cnt * WORD_BYTE; // 64 byte = 512bit
+        wmst_xfer_size = WORD_BYTE * 2; //addr_cnt_temp * WORD_BYTE;
     end
 
 
+    // always @(posedge clk, negedge rst_n) begin
+    //     if(!rst_n) begin
+    //         addr_cnt <= 0;
+    //     end else begin
+    //         addr_cnt <= start_conv ? 0 : out_fifo_pop_req ? addr_cnt + 1 : addr_cnt;
+    //     end
+    // end
+
+    reg [31:0] wcnt;
     always @(posedge clk, negedge rst_n) begin
-        if(!rst_n) begin
+        if (!rst_n) begin
+            r_wmst_req <=0;
+            flag_wmst_req <= 0;
             addr_cnt <= 0;
         end else begin
-            addr_cnt <= start_conv ? 0 : out_fifo_pop_req ? addr_cnt + 1 : addr_cnt;
+            if(wmst_done) begin
+                flag_wmst_req <= 0;
+                addr_cnt <= addr_cnt + 2;
+            end else if(out_fifo_data_cnt > 1 & !flag_wmst_req) begin
+                flag_wmst_req <= 1;
+                r_wmst_req <= 1;
+            end else if (r_wmst_req) begin
+                r_wmst_req <= 0;
+            end
         end
     end
 
+    reg r_port_v;
     always @(posedge clk, negedge rst_n) begin
         if (!rst_n) begin
             cnt <= 0;
             ofm0 <= 0;
             ofm1 <= 0;
-            ofm_temp <= 0;
+            ofm_temp0 <= 0;
+            ofm_temp1 <= 0;
             p_req <= 0;
-            r_wmst_req <= 0;
+            flat_done <= 0;
+            addr_cnt_temp <= 0;
+            wcnt <= 0;
+            r_port_v <= 0;
         end else begin
-            if (r_wmst_req) r_wmst_req <= 0;
-
-            if (flat_done != 0) begin
-                if (flat_done == WORD_READY || flat_done == LAST_WORD) begin
-                    ofm_temp <= ofm0;
+            if (flat_done == WORD_READY_1) begin
+                ofm_temp0 <= ofm_temp1;
+                flat_done <= PREQ;
+                p_req <= 1;
+            end else if (flat_done == PREQ) begin
+                p_req <= 0;
+                flat_done <= IDLE;
+            end
+            if (cnt == 16) begin
+                    cnt <= 0;
+                    flat_done <= (r_port_v) ? PREQ : WORD_READY_1;
+                    ofm_temp0 <= ofm0;
+                    ofm_temp1 <= ofm1;
                     p_req <= 1;
                 end else begin
-                    ofm_temp <= ofm1;
-                    p_req <= 1;
-                end
-                flat_done <= (flat_done == LAST_WORD) ? 0 : flat_done - 1;
-            end else begin
-                p_req <= 0;
-            end
-            if (cnt + 1 == 16) begin
-                cnt <= 0;
-                r_wmst_req <= 1;
-                flat_done <= (ofm_port0_v ^ ofm_port1_v) ? LAST_WORD : WORD_READY;
-            end else begin
-                if (ofm_port0_v) ofm0[cnt * 32 +: 32] <= {7'b000_0000,ofm_port0};
-                if (ofm_port1_v) ofm1[cnt * 32 +: 32] <= {7'b000_0000, ofm_port1};
-                cnt <= (ofm_port0_v | ofm_port1_v) ? cnt + 1 : cnt;
+                    if (ofm_port0_v) ofm0[cnt * 32 +: 32] <= {7'b000_0000,ofm_port0};
+                    if (ofm_port1_v) ofm1[cnt * 32 +: 32] <= {7'b000_0000, ofm_port1};
+                    cnt <= (ofm_port0_v | ofm_port1_v) ? cnt + 1 : cnt;
+                    r_port_v <= ofm_port0_v ^ ofm_port1_v;
             end
         end
     end
 
+//for debug
+
+    reg [31:0] p_ofm0 [0:15];
+    reg [31:0] p_ofm1 [0:15];
+    integer i;
+    always @(*) begin
+        for(i = 0; i < 16; i=i+1) begin
+            p_ofm0[i] <= ofm0[i*32 +: 32];
+            p_ofm1[i] <= ofm1[i*32 +: 32];
+        end
+    end
+
+    reg [31:0] wmst_done_counter;
+
+    always @(posedge clk, negedge rst_n) begin
+        if(!rst_n) begin
+            wmst_done_counter <= 0;
+        end else wmst_done_counter <= wmst_done ? wmst_done_counter + 1 : wmst_done_counter;
+    end
 endmodule

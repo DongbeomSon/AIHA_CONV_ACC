@@ -465,6 +465,12 @@ end
   endtask
 
 
+    reg signed [31:0] ofm [0:`OFM_C-1][0:`OFM_H-1][0:`OFM_W-1];
+    integer toc;
+    integer toh;
+    integer tow;
+    reg stop_flag;
+
 initial  begin : main_test_routine
     
     int     i, j;
@@ -484,13 +490,22 @@ initial  begin : main_test_routine
   
 
     int file_ptr;
+    int fp_w;
 
-    file_ptr = $fopen("./script/test/ifm.dat", "rb");
+    int toc, toh, tow;
+    int oc, oh, tw, index;
+    int thcnt;
+
+    reg signed [7:0] sibal;
+
+//    file_ptr = $fopen("./script/test/ifm.dat", "rb");
+//    file_ptr = $fopen("../common/ifm.dat", "rb");
+    file_ptr = $fopen("./data/ifm.dat", "rb");
     $display ("IFM_DATA SIZE : %d" , `IFM_LEN);
     temp = $fread(ifm_data, file_ptr);
     $fclose(file_ptr);    
-
-    file_ptr = $fopen("./script/test/wgt.dat", "rb");
+    sibal = ifm_data[0][7:0];
+    file_ptr = $fopen("./data/wgt.dat", "rb");
       $display ("WGT_DATA SIZE : %d" , `WGT_LEN);
     temp = $fread(wgt_data, file_ptr);
     $fclose(file_ptr); 
@@ -525,6 +540,56 @@ initial  begin : main_test_routine
     $display("-------------------------------------------------------------------------------------");
     $display("  PROCESS COMPLITED    ");
     $display("-------------------------------------------------------------------------------------");
+  
+
+    //Data compare
+    fp_w = $fopen("./data/conv_acc_out.txt");
+            toc = 0;
+            toh = 0;
+            tow = 0;
+            oc = 0;
+            oh = 0;
+            tw = 0;
+            thcnt = 0;
+            // if (oc <= `OFM_C-1) begin
+//            if(!end_op) begin
+            for(index = 0; index < `OFM_LEN_WORD*`GROUP_NUM; index++) begin
+              for(i = 0; i < 16; i=i+1) begin
+                ofm[oc][oh][i+tw*`TI] = ofm_data[index][32*(i+1)-1 -: 32];
+                if (ofm[oc][oh][i+tw*`TI] < 0) $display("fuck");
+              end
+              oh = oh + 1;
+              thcnt = thcnt + 1;
+                    if (thcnt == 5) begin
+                        thcnt = 0;
+                        tw = tw + 1;
+                        oh = oh - 5;
+                        if (tw == 4) begin
+                            tw = 0;
+                            oh = oh + 5;
+                        end
+                    end
+                    if (oh == 65) begin
+                        oh = 0;
+                        oc = oc + 1;
+                        $display("\033[33m[ConvKernel: ] Computing channel: %d\033[0m", oc);
+                    end
+            end
+
+            for (toc=0; toc < `OFM_C; toc = toc + 1) begin
+                $fwrite(fp_w, "\n\n");
+                for (toh=0; toh < `OFM_H; toh = toh + 1) begin
+                    for (tow=0; tow < `OFM_W; tow = tow + 1) begin
+                        $fwrite(fp_w, "%d ", ofm[toc][toh][tow]);
+                        if (tow == `OFM_W-1) begin
+                            $fwrite(fp_w, "\n");
+                        end
+                    end
+                end
+            end
+                    $display("\033[32m[ConvKernel: ] Finish writing results to conv_acc_out.txt\033[0m");
+                    $fclose(fp_w);
+
 
     // // Data compare        
     // if (words_compare(cipher_ecb_data, output_data, `WORD_NUM*`GROUP_NUM)) begin

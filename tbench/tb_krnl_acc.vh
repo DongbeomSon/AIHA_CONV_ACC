@@ -138,10 +138,10 @@ function void in_buffer_fill_memory(
   bit [511:0] temp;
   int i;
   for (index = 0; index < words; index++) begin
-    for (i = 0; i < 64; i = i + 1) begin // endian conversion to emulate general memory little endian behavior
-        temp[i*8+7-:8] = words_data[offset+index][(63-i)*8+7-:8];
-    end
-    mem.mem_model.backdoor_memory_write(ptr + index * 64, temp);
+     for (i = 0; i < 64; i = i + 1) begin // endian conversion to emulate general memory little endian behavior
+         temp[i*8+7-:8] = words_data[offset+index][(63-i)*8+7-:8];
+     end
+    mem.mem_model.backdoor_memory_write(ptr + index * 64, words_data[offset+index]);
   end
 endfunction
 
@@ -156,11 +156,13 @@ function void out_buffer_dump_memory(
 );
   int index;
   bit [511:0] temp;
-  int i;
+  int i, j;
   for (index = 0; index < words; index++) begin
     temp = mem.mem_model.backdoor_memory_read(ptr + index * 64);
-    for (i = 0; i < 64; i = i + 1) begin // endian conversion to emulate general memory little endian behavior
-        words_data[offset+index][i*8+7-:8] = temp[(63-i)*8+7-:8];
+    for (j = 0; j < 16; j = j + 1) begin
+      for (i = 0; i < 4; i = i + 1) begin // endian conversion to emulate general memory little endian behavior
+          words_data[offset+index][32*j + i*8+7-:8] = temp[32*j + (3-i)*8+7-:8];
+      end
     end
   end
 endfunction
