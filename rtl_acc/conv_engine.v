@@ -66,7 +66,8 @@ module conv_engine #(
     output [63:0]  wgt_offset, //reg?
 
 // end_conv , clear singnal
-    output end_conv
+    output end_conv,
+    output write_buffer_wait
 );
 
 
@@ -160,7 +161,8 @@ module conv_engine #(
             start_conv_pulse <= 0;
         end else begin
             start_conv_pulse <= r_start_conv ? 0 : start_conv;
-            r_start_conv <= r_start_conv ? 1 : start_conv;
+            r_start_conv <= end_conv ? 0 : 
+                            r_start_conv ? 1 : start_conv;
         end
     end
 
@@ -245,7 +247,7 @@ module conv_engine #(
         .ofm_port0(ofm_port0),
         .ofm_port1(ofm_port1),
 
-        .start_conv(start_conv_pulse),
+        .end_conv(end_conv),
 
         .tdata(axis_mst_ofm_tdata),
         .ready(axis_mst_ofm_tready),
@@ -255,7 +257,8 @@ module conv_engine #(
         .wmst_done(ofm_done),
         .wmst_req(ofm_req),
         .wmst_addr(ofm_offset),
-        .wmst_xfer_size(ofm_xfer_size)
+        .wmst_xfer_size(ofm_xfer_size),
+        .write_buffer_wait(write_buffer_wait)
     );
 
     assign ofm_xfer_addr = wmst_addr;

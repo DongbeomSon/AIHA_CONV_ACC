@@ -151,6 +151,39 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
   wire  ap_ready;
   wire  ap_continue;
 
+  reg [C_M_AXI_ADDR_WIDTH-1:0]           r_ifm_addr_base;
+  reg [C_M_AXI_ADDR_WIDTH-1:0]           r_wgt_addr_base;
+  reg [C_M_AXI_ADDR_WIDTH-1:0]           r_ofm_addr_base;
+  reg [31:0]                            r_cfg_ci;
+  reg [31:0]                            r_cfg_co;
+
+  wire [C_M_AXI_ADDR_WIDTH-1:0]           t_ifm_addr_base;
+  wire [C_M_AXI_ADDR_WIDTH-1:0]           t_wgt_addr_base;
+  wire [C_M_AXI_ADDR_WIDTH-1:0]           t_ofm_addr_base;
+  wire [31:0]                             t_cfg_ci;
+  wire [31:0]                             t_cfg_co;
+
+  assign ifm_addr_base = r_ifm_addr_base;
+  assign wgt_addr_base = r_wgt_addr_base;
+  assign ofm_addr_base = r_ofm_addr_base;
+  assign cfg_ci = r_cfg_ci;
+  assign cfg_co = r_cfg_co;
+
+  always @(posedge clk, negedge rst_n) begin
+    if(!rst_n) begin
+      r_ifm_addr_base <= 0;
+      r_wgt_addr_base <= 0;
+      r_ofm_addr_base <= 0;
+    end else begin
+      if(ap_start & ap_ready) begin
+        r_ifm_addr_base <= t_ifm_addr_base;
+        r_wgt_addr_base <= t_wgt_addr_base;
+        r_ofm_addr_base <= t_ofm_addr_base;
+        r_cfg_ci <= t_cfg_ci;
+        r_cfg_co <= t_cfg_co;
+      end
+    end
+  end
 
   krnl_acc_axi_ctrl_slave  u_krnl_cbc_axi_ctrl_slave (
     .ACLK           (clk),     
@@ -180,11 +213,11 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .ap_ready       (ap_ready),
     .ap_continue    (ap_continue),
 
-    .cfg_ci           (cfg_ci),
-    .cfg_co       (cfg_co),
-    .ifm_addr_base      (ifm_addr_base),
-    .wgt_addr_base      (wgt_addr_base),
-    .ofm_addr_base      (ofm_addr_base)
+    .cfg_ci           (t_cfg_ci),
+    .cfg_co       (t_cfg_co),
+    .ifm_addr_base      (t_ifm_addr_base),
+    .wgt_addr_base      (t_wgt_addr_base),
+    .ofm_addr_base      (t_ofm_addr_base)
 );
 
 
@@ -367,7 +400,7 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
 
 
     wire op_start;
-
+    wire write_buffer_wait;
 // instantiation of engine control
   acc_eng_ctrl u_engine_control (
     .clk                       (clk),
@@ -383,7 +416,8 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .op_start                 (op_start),
 
     .end_conv                 (end_conv),
-    .wmst_done                (ofm_done)    
+    .wmst_done                (ofm_done),
+    .write_buffer_wait        (write_buffer_wait) 
 
 );
 
@@ -429,7 +463,8 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .wgt_done (wgt_done),
     .wgt_offset(wgt_addr_offset),
 
-    .end_conv (end_conv)
+    .end_conv (end_conv),
+    .write_buffer_wait(write_buffer_wait)
 );
 
   reg [31:0] cycle_counter;
