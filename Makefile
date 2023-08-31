@@ -13,13 +13,13 @@ help::
 	$(ECHO) "      Command to generate the IPs used in this design"
 	$(ECHO) ""
 	$(ECHO) "  make pack_kernel"
-	$(ECHO) "      Command to pack the module krnl_cbc to Vitis kernel"
+	$(ECHO) "      Command to pack the module krnl_acc to Vitis kernel"
 	$(ECHO) ""
 	$(ECHO) "  make runsim"
 	$(ECHO) "      Command to run the simulation"
 	$(ECHO) ""
 	$(ECHO) "  make build_hw"
-	$(ECHO) "      Command to build xclbin files for Alveo platform, including krnl_cbc and krnl_aes kernels"
+	$(ECHO) "      Command to build xclbin files for Alveo platform, including krnl_acc and krnl_aes kernels"
 	$(ECHO) ""
 	$(ECHO) "  make build_sw"
 	$(ECHO) "      Command to build host software for xclbin test"
@@ -74,11 +74,11 @@ validate_sim:
 XOCCFLAGS := --platform $(PLATFORM) -t $(TARGET)  -s -g
 XOCCLFLAGS := --link --optimize 3
 # You could uncomment following line and modify the options for hardware debug/profiling
-#DEBUG_OPT := --debug.chipscope krnl_aes_1 --debug.chipscope krnl_cbc_1 --debug.protocol all --profile_kernel data:all:all:all:all
+#DEBUG_OPT := --debug.chipscope krnl_aes_1 --debug.chipscope krnl_acc_1 --debug.protocol all --profile_kernel data:all:all:all:all
 #DEBUG_OPT := --profile_kernel data:all:all:all:all
 
 build_hw:
-	v++ $(XOCCLFLAGS) $(XOCCFLAGS) $(DEBUG_OPT) --config krnl_cbc_test.cfg -o krnl_cbc_test_$(TARGET).xclbin krnl_cbc.xo
+	v++ $(XOCCLFLAGS) $(XOCCFLAGS) $(DEBUG_OPT) --config krnl_acc_test.cfg -o krnl_acc_test_$(TARGET).xclbin krnl_acc.xo
 
 all: gen_ip pack_kernel build_hw
 
@@ -87,11 +87,11 @@ CXXFLAGS := -std=c++17 -Wno-deprecated-declarations
 CXXFLAGS += -I$(XILINX_XRT)/include
 LDFLAGS := -L$(XILINX_XRT)/lib
 LDFLAGS += $(LDFLAGS) -lxrt_coreutil -lssl -lcrypto -lpthread
-EXECUTABLE := host_krnl_cbc_test
+EXECUTABLE := host_krnl_acc_test
 
-HOST_SRCS := ./host/host_krnl_cbc_test.cpp
+HOST_SRCS := ./host/host_krnl_acc_test.cpp
 
-build_sw: host_krnl_cbc_test
+build_sw: host_krnl_acc_test
 
 $(EXECUTABLE): $(HOST_SRCS)
 	$(CXX) -o $(EXECUTABLE) $^ $(CXXFLAGS) $(LDFLAGS)
@@ -100,4 +100,4 @@ $(EXECUTABLE): $(HOST_SRCS)
 clean:
 	$(RM) -rf ip_generation vivado_pack_krnl_project
 	$(RM) -rf *.xo *.xclbin *.xclbin.info *.xclbin.link_summary *.jou *.log *.xo.compile_summary _x
-	$(RM) -rf *.dat *.pb xsim.dir *.xml *.ltx *.csv *.json *.protoinst *.wdb *.wcfg host_krnl_cbc_test
+	$(RM) -rf *.dat *.pb xsim.dir *.xml *.ltx *.csv *.json *.protoinst *.wdb *.wcfg host_krnl_acc_test
