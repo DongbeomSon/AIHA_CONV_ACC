@@ -16,8 +16,8 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
 )
 (
   // System Signals
-  input wire                                    clk               ,
-  input wire                                    rst_n             ,
+  input wire                                    ap_clk               ,
+  input wire                                    ap_rst_n             ,
 
 
 // AXI4-Lite slave interface
@@ -169,8 +169,8 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
   assign cfg_ci = r_cfg_ci;
   assign cfg_co = r_cfg_co;
 
-  always @(posedge clk, negedge rst_n) begin
-    if(!rst_n) begin
+  always @(posedge ap_clk, negedge ap_rst_n) begin
+    if(!ap_rst_n) begin
       r_ifm_addr_base <= 0;
       r_wgt_addr_base <= 0;
       r_ofm_addr_base <= 0;
@@ -186,8 +186,8 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
   end
 
   krnl_acc_axi_ctrl_slave  u_krnl_cbc_axi_ctrl_slave (
-    .ACLK           (clk),     
-    .ARESETn        (rst_n),
+    .ACLK           (ap_clk),     
+    .ARESETn        (ap_rst_n),
 
     .AWADDR         (s_axi_control_awaddr),
     .AWVALID        (s_axi_control_awvalid),
@@ -282,8 +282,8 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .C_INCLUDE_DATA_FIFO    (0)             // disable axi master fifo
   )
         u_ifm_read_master (
-    .aclk                       (clk),
-    .areset                     (!rst_n),
+    .aclk                       (ap_clk),
+    .areset                     (!ap_rst_n),
 
     .ctrl_start                 (ifm_start),
     .ctrl_done                  (ifm_done),
@@ -314,8 +314,8 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .C_INCLUDE_DATA_FIFO    (0)             // disable axi master fifo
   )
         u_wgt_read_master (
-    .aclk                       (clk),
-    .areset                     (!rst_n),
+    .aclk                       (ap_clk),
+    .areset                     (!ap_rst_n),
 
     .ctrl_start                 (wgt_start),
     .ctrl_done                  (wgt_done),
@@ -362,8 +362,8 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .C_INCLUDE_DATA_FIFO    (0)             // disable axi master fifo
   )
         u_ofm_write_master (
-    .aclk                       (clk),
-    .areset                     (!rst_n),
+    .aclk                       (ap_clk),
+    .areset                     (!ap_rst_n),
 
     .ctrl_start                 (ofm_start),              
     .ctrl_done                  (ofm_done),               
@@ -403,8 +403,8 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     wire write_buffer_wait;
 // instantiation of engine control
   acc_eng_ctrl u_engine_control (
-    .clk                       (clk),
-    .rst_n                   (rst_n),
+    .clk                       (ap_clk),
+    .rst_n                   (ap_rst_n),
 
 
     .ap_start                   (ap_start),
@@ -423,8 +423,8 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
 
 // instantiation of cbc_engine_0
     conv_engine conv_eng (
-    .clk                   (clk),
-    .rst_n               (rst_n),
+    .clk                   (ap_clk),
+    .rst_n               (ap_rst_n),
              
     .op_start               (op_start),
     
@@ -468,8 +468,8 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
 );
 
   reg [31:0] cycle_counter;
-  always @(negedge rst_n, posedge clk) begin
-      if(!rst_n) begin
+  always @(negedge ap_rst_n, posedge ap_clk) begin
+      if(!ap_rst_n) begin
           cycle_counter <= 0;
       end else begin
           if(!ap_ready) cycle_counter <= cycle_counter +1;
