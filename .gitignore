@@ -16,3 +16,8 @@ test_dir/
 *.jou
 *.dat
 *.xo
+_x/
+*.xclbin*
+*.csv
+*.json
+xilinx*
