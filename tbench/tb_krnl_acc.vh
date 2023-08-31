@@ -141,7 +141,7 @@ function void in_buffer_fill_memory(
      for (i = 0; i < 64; i = i + 1) begin // endian conversion to emulate general memory little endian behavior
          temp[i*8+7-:8] = words_data[offset+index][(63-i)*8+7-:8];
      end
-    mem.mem_model.backdoor_memory_write(ptr + index * 64, words_data[offset+index]);
+    mem.mem_model.backdoor_memory_write(ptr + index * 64, temp);
   end
 endfunction
 

@@ -302,7 +302,7 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .m_axis_tvalid              (ifm_axis_tvalid),
     .m_axis_tready              (ifm_axis_tready),
     .m_axis_tlast               (ifm_axis_tlast),
-    .m_axis_tdata               (ifm_axis_tdata_little_endian)
+    .m_axis_tdata               (ifm_axis_tdata)
 );
 
 // instantiation of axi read master
@@ -334,7 +334,7 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .m_axis_tvalid              (wgt_axis_tvalid),
     .m_axis_tready              (wgt_axis_tready),
     .m_axis_tlast               (wgt_axis_tlast),
-    .m_axis_tdata               (wgt_axis_tdata_little_endian)
+    .m_axis_tdata               (wgt_axis_tdata)
 );
     
     // data endian conversion
