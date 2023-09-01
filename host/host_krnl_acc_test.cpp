@@ -38,22 +38,32 @@
 #define OFM_C 8
 
 
+void wrrite_ofm_validate_test(int* arr, int size){
+    for(int i = 0; i < size/4 ;i++){
+        std::cout << "idx : " << i << " : " << std::hex << arr[i] << std::endl;
+    }
+}
 // function to write binary file
 void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int groups_num)
 {
     std::ofstream file(file_name);
 
-    int ofm [OFM_C][OFM_H][OFM_W];
+    int ofm [OFM_C][OFM_H+4][OFM_W+4];
 
     int oc, oh, ow, tw, thcnt;
+    int i;
     for(int j = 0; j < groups_num; j++){
         oc = 0;
         oh = 0;
         ow = 0;
         tw = 0;
         thcnt = 0;
-        for(int index = 0; index < ofm_len/4; index++) {
+        i = 0;
+        for(int index = 0; index < ofm_len/4; index+=16) {
+            if(oc == 8) break;
             std::cout <<"test " << index << "  " << oc << "  " << oh << "  " << ow << "  "<< tw << "  " << thcnt << std::endl;
+            
+
             for(int i = 0; i < 16; i++){
                 ofm[oc][oh][i + tw*TI] = write_buffer[ofm_len/4*j + index + i];
             }
@@ -73,12 +83,12 @@ void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int g
                 oc = oc + 1;
             }
         }
-
+            std::cout << "re_arranged successful" << std::endl;
         for (int toc=0; toc < OFM_C; toc++) {
             file << "\n\n";
             for (int toh=0; toh < OFM_H; toh++){
                 for (int tow=0; tow < OFM_W; tow++){
-                    file << ofm[toc][toh][tow];
+                    file << ofm[toc][toh][tow] << " ";
                     if(tow == OFM_W-1){
                         file << "\n";
                     }
@@ -212,12 +222,7 @@ float conv2d(xrt::kernel kernel,                     // kernel handle
 }
 
 
-void wrrite_ofm_validate_test(int* arr, int size){
-    for(int i = 0; i < size/4 ;i++){
-        std::cout << "idx : " << i << " : " << std::hex << arr[i] << std::endl;
-    }
 
-}
 // Main program body
 int main(int argc, char *argv[]) {
 
@@ -376,8 +381,8 @@ int main(int argc, char *argv[]) {
     // } else {
     //     std::cout << "Data validation SUCCESS" << std::endl;
     // }
-    //write_ofm_file("./data/hw_conv.txt", ofm_len, ofm, groups_num);
-    wrrite_ofm_validate_test(ofm, ofm_len);
+    write_ofm_file("./data/hw_conv.txt", ofm_len, ofm, groups_num);
+    //wrrite_ofm_validate_test(ofm, ofm_len);
     std::cout << "CONVOLUTION OUTPUT GENERATED" << std::endl;
     
     std::cout << "Execution time = " << total_run_time << " ms" << std::endl;

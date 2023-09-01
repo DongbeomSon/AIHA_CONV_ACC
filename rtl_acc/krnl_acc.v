@@ -384,7 +384,7 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
                 
     .s_axis_tvalid              (ofm_axis_tvalid),
     .s_axis_tready              (ofm_axis_tready),
-    .s_axis_tdata               (ofm_axis_tdata_little_endian)
+    .s_axis_tdata               (ofm_axis_tdata) //should be little endian
 );
 
         // data endian conversion
