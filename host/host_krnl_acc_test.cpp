@@ -61,7 +61,7 @@ void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int g
         i = 0;
         for(int index = 0; index < ofm_len/4; index+=16) {
             if(oc == 8) break;
-            std::cout <<"test " << index << "  " << oc << "  " << oh << "  " << ow << "  "<< tw << "  " << thcnt << std::endl;
+//            std::cout <<"test " << index << "  " << oc << "  " << oh << "  " << ow << "  "<< tw << "  " << thcnt << std::endl;
             
 
             for(int i = 0; i < 16; i++){
