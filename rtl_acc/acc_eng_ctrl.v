@@ -50,6 +50,8 @@ module acc_eng_ctrl #(
         else if (ap_start && ap_ready) begin
             op_start <= 1'b1;
             eng_busy <= 1;
+        end else if (r_end_conv && !write_buffer_wait) begin
+            eng_busy <= 0;
         end
     end
 
@@ -57,7 +59,10 @@ module acc_eng_ctrl #(
         if(!rst_n) begin
             r_end_conv <= 0;    
         end else begin
-            if(end_conv) r_end_conv <= 1;
+            if(end_conv) 
+                r_end_conv <= 1;
+            else if (r_end_conv && !write_buffer_wait)
+                r_end_conv <= 0;
         end
     end
 
@@ -75,8 +80,6 @@ module acc_eng_ctrl #(
             ap_done <= 1'b0;
         else if (r_end_conv && !write_buffer_wait) begin                 // when any CBC engine finish axi master write, assert ap_done
             ap_done <= 1'b1;
-            eng_busy <= 0;
-            r_end_conv <= 0;
         end
     end
 
