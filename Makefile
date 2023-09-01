@@ -46,7 +46,7 @@ TARGET := hw
 
 GROUP_NUM := 1
 
-V_MODE = hw
+V_MODE := hw
 
 
 .phony: clean traces
