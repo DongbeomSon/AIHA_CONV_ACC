@@ -473,7 +473,7 @@ end
 
 initial  begin : main_test_routine
     
-    int     i, j;
+    int     i, j, k;
     int     temp;
     int     mismatch;
     int     start_time;
@@ -553,7 +553,10 @@ initial  begin : main_test_routine
                   thcnt = 0;
                   for(index = 0; index < `OFM_LEN_WORD; index++) begin
                     for(i = 0; i < 16; i=i+1) begin
-                      ofm[oc][oh][i+tw*`TI] = ofm_data[`OFM_LEN_WORD*j + index][32*(i+1)-1 -: 32];
+//                      ofm[oc][oh][i+tw*`TI] = ofm_data[`OFM_LEN_WORD*j + index][32*(i+1)-1 -: 32];
+                      for(k = 0; k < 4; k=k+1)begin
+                        ofm[oc][oh][i+tw*`TI][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index][(32*(15-i)+(3-k)*8) +: 8];
+                      end
                     end
                     oh = oh + 1;
                     thcnt = thcnt + 1;
