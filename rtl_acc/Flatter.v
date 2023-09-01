@@ -102,6 +102,9 @@ module flatter #(
             r_end_conv <= 0;
         end else begin
             if(end_conv) r_end_conv <= 1;
+            else if (r_end_conv & out_fifo_empty) begin
+                r_end_conv <= 0;
+            end
         end
     end
 
@@ -116,7 +119,6 @@ module flatter #(
                 flag_wmst_req <= 0;
                 if(r_end_conv & out_fifo_empty) begin
                     addr_cnt <= 0;
-                    r_end_conv <= 0;
                 end else begin
                     addr_cnt <= addr_cnt + 2;
                 end
