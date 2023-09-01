@@ -22,3 +22,4 @@ _x/
 *.json
 xilinx*
 host_krnl_acc_test
+*.ltx
