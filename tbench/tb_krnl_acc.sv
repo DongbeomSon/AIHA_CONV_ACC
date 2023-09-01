@@ -314,8 +314,8 @@ end
 // instantiation of krnl_cbc
  krnl_acc krnl_acc_inst (
 // System Signals
-    .clk                 (ap_clk),
-    .rst_n               (ap_rst_n),
+    .ap_clk                 (ap_clk),
+    .ap_rst_n               (ap_rst_n),
 
 // AXI4-Lite slave interface
     .s_axi_control_awvalid   (m_axi_acc_awvalid),
@@ -473,7 +473,7 @@ end
 
 initial  begin : main_test_routine
     
-    int     i, j;
+    int     i, j, k;
     int     temp;
     int     mismatch;
     int     start_time;
@@ -496,15 +496,12 @@ initial  begin : main_test_routine
     int oc, oh, tw, index;
     int thcnt;
 
-    reg signed [7:0] sibal;
-
 //    file_ptr = $fopen("./script/test/ifm.dat", "rb");
 //    file_ptr = $fopen("../common/ifm.dat", "rb");
     file_ptr = $fopen("./data/ifm.dat", "rb");
     $display ("IFM_DATA SIZE : %d" , `IFM_LEN);
     temp = $fread(ifm_data, file_ptr);
     $fclose(file_ptr);    
-    sibal = ifm_data[0][7:0];
     file_ptr = $fopen("./data/wgt.dat", "rb");
       $display ("WGT_DATA SIZE : %d" , `WGT_LEN);
     temp = $fread(wgt_data, file_ptr);
@@ -523,8 +520,8 @@ initial  begin : main_test_routine
     $display("  CONVOLUTION ACCLEALATOR TEST, total %1d groups", `GROUP_NUM);
     $display("-------------------------------------------------------------------------------------");    
     // set kernel registers                      
-    blocking_write_register (krnl_acc_ctrl, ACC_CFG_CI, 32'h`CI);                 // mode = encryption
-    blocking_write_register (krnl_acc_ctrl, ACC_CFG_CO, 32'h`CO);                 // mode = encryption
+    blocking_write_register (krnl_acc_ctrl, ACC_CFG_CI, 32'h`CI);                 // CI = 0 >> CFG_CI = 8 = 8*(CI+1)
+    blocking_write_register (krnl_acc_ctrl, ACC_CFG_CO, 32'h`CO);                 // CO = 0 >> CFG_CI = 8 = 8*(CI+1)
 
     // fill input buffer memory with plain data
     in_buffer_fill_memory(ifm_buffer, IN_BUFFER_BASE0, ifm_data, 0, `IFM_LEN_WORD*`GROUP_NUM);   
@@ -556,7 +553,10 @@ initial  begin : main_test_routine
                   thcnt = 0;
                   for(index = 0; index < `OFM_LEN_WORD; index++) begin
                     for(i = 0; i < 16; i=i+1) begin
-                      ofm[oc][oh][i+tw*`TI] = ofm_data[`OFM_LEN_WORD*j + index][32*(i+1)-1 -: 32];
+//                      ofm[oc][oh][i+tw*`TI] = ofm_data[`OFM_LEN_WORD*j + index][32*(i+1)-1 -: 32];
+                      for(k = 0; k < 4; k=k+1)begin
+                        ofm[oc][oh][i+tw*`TI][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index][(32*(15-i)+(3-k)*8) +: 8];
+                      end
                     end
                     oh = oh + 1;
                     thcnt = thcnt + 1;

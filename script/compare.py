@@ -1,6 +1,24 @@
 import csv
+import sys
+
+
+
+if len(sys.argv) != 2:
+    mode = "sim"
+else:
+    mode = str(sys.argv[1])
+    print ("test for " , mode, " result")
+
+if not (mode == "sim" or mode == "hw"):
+    print("invalide validation mode")
+    exit()
+
 golden_result = csv.reader(open("./ofm.txt"), delimiter=',')
-my_result     = csv.reader(open("./conv_acc_out.txt"), delimiter=' ')
+
+if mode == "sim":
+    my_result     = csv.reader(open("./conv_acc_out.txt"), delimiter=' ')
+else:
+    my_result     = csv.reader(open("./hw_conv.txt"), delimiter=' ')
 
 golden_vec = []
 for line in golden_result:

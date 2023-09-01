@@ -15,3 +15,10 @@ test_dir/
 *.str
 *.jou
 *.dat
+*.xo
+_x/
+*.xclbin*
+*.csv
+*.json
+xilinx*
+host_krnl_acc_test
