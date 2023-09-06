@@ -8,7 +8,7 @@ module parser #(
 
     input [INPUT_WIDTH-1:0] fm,
     input ifm_read,
-    input init_word, //first hand_shake of axis after conv_start assert
+//    input init_word, //first hand_shake of axis after conv_start assert
 
     output [OUTPUT_WIDTH-1:0] parse_out,
     output reg input_req
@@ -34,7 +34,7 @@ module parser #(
     always @(posedge clk, negedge rst_n) begin
         if(!rst_n) begin
             input_req <= 0;
-            r_parse_out <= 0;
+//            r_parse_out <= 0;
             cnt <= 0;
         end else begin
             if (ifm_read) begin
