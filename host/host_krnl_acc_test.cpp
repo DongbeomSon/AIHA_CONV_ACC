@@ -37,6 +37,10 @@
 #define OFM_W 61
 #define OFM_C 8
 
+void wait_for_enter(const std::string &msg) {
+    std::cout << msg << std::endl;
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
 
 void wrrite_ofm_validate_test(int* arr, int size){
     for(int i = 0; i < size/4 ;i++){
@@ -227,7 +231,7 @@ float conv2d(xrt::kernel kernel,                     // kernel handle
 int main(int argc, char *argv[]) {
 
     int opt;
-    const char *optstring = "i:o:sh";
+    const char *optstring = "g:i:o:sh";
 
     int groups_num = 1; 
     int cfg_ci = 0;
@@ -236,6 +240,10 @@ int main(int argc, char *argv[]) {
     int chain = 1;      // 0 means ap_ctrl_hs mode, 1 mean ap_ctrl_chain mode
 
     while ((opt = getopt(argc, argv, optstring)) != -1) {
+        if ((opt == 'g') && optarg) {
+            groups_num = std::stoi(std::string(optarg));
+        }
+
         if ((opt == 'i') && optarg) {
             cfg_ci = std::stoi(std::string(optarg));
         }
@@ -325,7 +333,8 @@ int main(int argc, char *argv[]) {
                                                 "krnl_acc",
                                                 xrt::kernel::cu_access_mode::exclusive);
 
-
+    wait_for_enter("\nPress ENTER to continue after setting up ILA trigger...");
+    
     // create device buffer objects
     std::cout << "Create input and output device buffers" << std::endl;
     xrt::bo ifm_buffer = xrt::bo (device, ifm_len * groups_num, xrt::bo::flags::normal, kernel_krnl_acc.group_id(krnl_acc_arg_IFM_ADDR_BASE));
