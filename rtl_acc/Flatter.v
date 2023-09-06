@@ -38,7 +38,7 @@ module flatter #(
     wire out_fifo_full;
     wire [3:0] out_fifo_data_cnt;
 
-    FifoType0 #(.data_width (512), .addr_bits (3)) ofm_fifo (
+    FifoType0 #(.data_width (512), .addr_bits (12)) ofm_fifo (
         .CLK        (clk),
         .nRESET     (rst_n),
         .PUSH_REQ   (out_fifo_push_req),
@@ -81,7 +81,6 @@ module flatter #(
 
 
     reg [31:0] addr_cnt;
-    reg [31:0] addr_cnt_temp;
 
     always @(*) begin
         wmst_addr = wmst_offset + addr_cnt * WORD_BYTE; // 64 byte = 512bit
@@ -102,7 +101,7 @@ module flatter #(
             r_end_conv <= 0;
         end else begin
             if(end_conv) r_end_conv <= 1;
-            else if (r_end_conv & out_fifo_empty) begin
+            else if (wmst_done & r_end_conv & out_fifo_empty) begin
                 r_end_conv <= 0;
             end
         end
@@ -141,7 +140,6 @@ module flatter #(
             ofm_temp1 <= 0;
             p_req <= 0;
             flat_done <= 0;
-            addr_cnt_temp <= 0;
             wcnt <= 0;
             r_port_v <= 0;
         end else begin
