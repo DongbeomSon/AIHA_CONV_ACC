@@ -173,7 +173,7 @@ module conv_engine #(
 
         .fm     (wrapped_ifm),
         .ifm_read (ifm_read),
-        .init_word  (start_conv_pulse),
+ //       .init_word  (start_conv_pulse),
 
         .parse_out (ifm),
         .input_req (wrapped_ifm_req)
@@ -187,7 +187,7 @@ module conv_engine #(
 
         .fm     (wrapped_wgt),
         .ifm_read (wgt_read),
-        .init_word  (start_conv_pulse),
+ //       .init_word  (start_conv_pulse),
 
         .parse_out (wgt),
         .input_req (wrapped_wgt_req)

@@ -467,6 +467,24 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .write_buffer_wait(write_buffer_wait)
 );
 
+	// // ILA monitoring combinatorial adder
+	// ila_0 i_ila_0 (
+	// 	.clk(ap_clk),              // input wire        clk
+	// 	.probe0(op_start),           // input wire [0:0]  probe0  
+	// 	.probe1(end_conv), // input wire [0:0]  probe1 
+	// 	.probe2(cfg_ci),   // input wire [31:0]  probe2 
+	// 	.probe3(cfg_co),    // input wire [31:0] probe3 
+	// 	.probe4(ifm_axis_tvalid),     // input wire [0:0]  probe4 
+	// 	.probe5(ifm_axis_tdata),   // input wire [511:0]  probe5 
+	// 	.probe6(ifm_axis_tready),       // input wire [0:0] probe6
+  // 		.probe7(wgt_axis_tvalid),     // input wire [0:0]  probe7 
+	// 	.probe8(wgt_axis_tdata),   // input wire [511:0]  probe8 
+	// 	.probe9(wgt_axis_tready),       // input wire [0:0] probe9
+  // 		.probe10(ofm_axis_tvalid),     // input wire [0:0]  probe10 
+	// 	.probe11(ofm_axis_tdata),   // input wire [511:0]  probe11 
+	// 	.probe12(ofm_axis_tready)       // input wire [0:0] probe12
+	// );
+
   reg [31:0] cycle_counter;
   always @(negedge ap_rst_n, posedge ap_clk) begin
       if(!ap_rst_n) begin

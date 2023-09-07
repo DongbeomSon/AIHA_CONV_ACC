@@ -37,6 +37,10 @@
 #define OFM_W 61
 #define OFM_C 8
 
+void wait_for_enter(const std::string &msg) {
+    std::cout << msg << std::endl;
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
 
 void wrrite_ofm_validate_test(int* arr, int size){
     for(int i = 0; i < size/4 ;i++){
@@ -83,7 +87,7 @@ void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int g
                 oc = oc + 1;
             }
         }
-            std::cout << "re_arranged successful" << std::endl;
+//            std::cout << "re_arranged successful" << std::endl;
         for (int toc=0; toc < OFM_C; toc++) {
             file << "\n\n";
             for (int toh=0; toh < OFM_H; toh++){
@@ -152,7 +156,7 @@ void conv2d_thread(xrt::run run_krnl_acc, xrt::bo ifm_buffer, xrt::bo wgt_buffer
     run_krnl_acc.set_arg(krnl_acc_arg_IFM_ADDR_BASE, ifm_buffer);
     run_krnl_acc.set_arg(krnl_acc_arg_WGT_ADDR_BASE, wgt_buffer);
     run_krnl_acc.set_arg(krnl_acc_arg_OFM_ADDR_BASE, ofm_buffer);
-    std::cout << "all arg set" <<std::endl;
+//    std::cout << "all arg set" <<std::endl;
     run_krnl_acc.start();
     run_krnl_acc.wait();
 }
@@ -170,7 +174,7 @@ float conv2d(xrt::kernel kernel,                     // kernel handle
     struct timeval kernels_start_time, kernels_finish_time; // kernel execution time record
 
     int thread_num = groups_num;    // thread number used to handle all data
-    std::cout << "conv2d called " << std::endl;
+//    std::cout << "conv2d called " << std::endl;
     std::vector<xrt::run> run_krnl_acc;
     std::vector<std::thread> t(thread_num);
     
@@ -227,7 +231,7 @@ float conv2d(xrt::kernel kernel,                     // kernel handle
 int main(int argc, char *argv[]) {
 
     int opt;
-    const char *optstring = "i:o:sh";
+    const char *optstring = "g:i:o:sh";
 
     int groups_num = 1; 
     int cfg_ci = 0;
@@ -236,6 +240,10 @@ int main(int argc, char *argv[]) {
     int chain = 1;      // 0 means ap_ctrl_hs mode, 1 mean ap_ctrl_chain mode
 
     while ((opt = getopt(argc, argv, optstring)) != -1) {
+        if ((opt == 'g') && optarg) {
+            groups_num = std::stoi(std::string(optarg));
+        }
+
         if ((opt == 'i') && optarg) {
             cfg_ci = std::stoi(std::string(optarg));
         }
@@ -325,7 +333,8 @@ int main(int argc, char *argv[]) {
                                                 "krnl_acc",
                                                 xrt::kernel::cu_access_mode::exclusive);
 
-
+    wait_for_enter("\nPress ENTER to continue after setting up ILA trigger...");
+    
     // create device buffer objects
     std::cout << "Create input and output device buffers" << std::endl;
     xrt::bo ifm_buffer = xrt::bo (device, ifm_len * groups_num, xrt::bo::flags::normal, kernel_krnl_acc.group_id(krnl_acc_arg_IFM_ADDR_BASE));
@@ -386,6 +395,10 @@ int main(int argc, char *argv[]) {
     std::cout << "CONVOLUTION OUTPUT GENERATED" << std::endl;
     
     std::cout << "Execution time = " << total_run_time << " ms" << std::endl;
-    std::cout << "Throughput = " << ifm_len * groups_num / total_run_time * 1000 / (1024 * 1024) << " MB/s" << std::endl << std::endl;
+
+    int excution = (64 - 4 + 1) * (64 - 4 + 1); // (64 - 4 + 1) * (64 - 4 + 1) * 16 * 8 * 8 = 61 * 61 KB
+    std::cout << "Total # of processing " << excution * groups_num << "KB" << std::endl;
+    std::cout << "Throughput = " <<  excution * groups_num / total_run_time * 1000 / 1024 << " MB/s" << std::endl << std::endl;
+//    std::cout << "Throughput = " << ifm_len * groups_num / total_run_time * 1000 / (1024 * 1024) << " MB/s" << std::endl << std::endl;
 
 }

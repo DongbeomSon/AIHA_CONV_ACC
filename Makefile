@@ -66,7 +66,7 @@ runsim:
 #	cp ./script/compare.py ./data/t1/compare.py; cp ./script/compare.py ./data/t2/compare.py; cd data/t1; python3 ./compare.py; cd ..; cd t2; python3 ./compare.py;
 
 gen_tb:
-	rm -rf data; mkdir data; cd data; mkdir t1; mkdir t2; cd t1; python3 ../../script/testbench_gen.py; cd ..; cd t2; python3 ../../script/testbench_gen.py;
+	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM);
 #	rm ./data/*.txt; cd data; python3 testbench_gen.py
 
 validate:
