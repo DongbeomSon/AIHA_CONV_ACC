@@ -396,9 +396,9 @@ int main(int argc, char *argv[]) {
     
     std::cout << "Execution time = " << total_run_time << " ms" << std::endl;
 
-    int excution = (64 - 4 + 1) * (64 - 4 + 1) * 8 * 8;
-    std::cout << "Total # of processing " << excution << std::endl;
-    std::cout << "Throughput = " <<  excution * groups_num / (total_run_time / 1000) / (1024 * 1024) << " MB/s" << std::endl << std::endl;
+    int excution = (64 - 4 + 1) * (64 - 4 + 1); // (64 - 4 + 1) * (64 - 4 + 1) * 16 * 8 * 8 = 61 * 61 KB
+    std::cout << "Total # of processing " << excution * groups_num << "KB" << std::endl;
+    std::cout << "Throughput = " <<  excution * groups_num / total_run_time * 1000 / 1024 << " MB/s" << std::endl << std::endl;
 //    std::cout << "Throughput = " << ifm_len * groups_num / total_run_time * 1000 / (1024 * 1024) << " MB/s" << std::endl << std::endl;
 
 }
