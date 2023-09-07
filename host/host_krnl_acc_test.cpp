@@ -87,7 +87,7 @@ void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int g
                 oc = oc + 1;
             }
         }
-            std::cout << "re_arranged successful" << std::endl;
+//            std::cout << "re_arranged successful" << std::endl;
         for (int toc=0; toc < OFM_C; toc++) {
             file << "\n\n";
             for (int toh=0; toh < OFM_H; toh++){
@@ -156,7 +156,7 @@ void conv2d_thread(xrt::run run_krnl_acc, xrt::bo ifm_buffer, xrt::bo wgt_buffer
     run_krnl_acc.set_arg(krnl_acc_arg_IFM_ADDR_BASE, ifm_buffer);
     run_krnl_acc.set_arg(krnl_acc_arg_WGT_ADDR_BASE, wgt_buffer);
     run_krnl_acc.set_arg(krnl_acc_arg_OFM_ADDR_BASE, ofm_buffer);
-    std::cout << "all arg set" <<std::endl;
+//    std::cout << "all arg set" <<std::endl;
     run_krnl_acc.start();
     run_krnl_acc.wait();
 }
@@ -174,7 +174,7 @@ float conv2d(xrt::kernel kernel,                     // kernel handle
     struct timeval kernels_start_time, kernels_finish_time; // kernel execution time record
 
     int thread_num = groups_num;    // thread number used to handle all data
-    std::cout << "conv2d called " << std::endl;
+//    std::cout << "conv2d called " << std::endl;
     std::vector<xrt::run> run_krnl_acc;
     std::vector<std::thread> t(thread_num);
     
@@ -395,6 +395,10 @@ int main(int argc, char *argv[]) {
     std::cout << "CONVOLUTION OUTPUT GENERATED" << std::endl;
     
     std::cout << "Execution time = " << total_run_time << " ms" << std::endl;
-    std::cout << "Throughput = " << ifm_len * groups_num / total_run_time * 1000 / (1024 * 1024) << " MB/s" << std::endl << std::endl;
+
+    int excution = (64 - 4 + 1) * (64 - 4 + 1) * 8 * 8;
+    std::cout << "Total # of processing " << excution << std::endl;
+    std::cout << "Throughput = " <<  excution * groups_num / (total_run_time / 1000) / (1024 * 1024) << " MB/s" << std::endl << std::endl;
+//    std::cout << "Throughput = " << ifm_len * groups_num / total_run_time * 1000 / (1024 * 1024) << " MB/s" << std::endl << std::endl;
 
 }
