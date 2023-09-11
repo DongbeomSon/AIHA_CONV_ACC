@@ -74,7 +74,7 @@ validate:
 
 ################## hardware build 
 XOCCFLAGS := --platform $(PLATFORM) -t $(TARGET)  -s -g
-XOCCLFLAGS := --link --optimize 3
+XOCCLFLAGS := --link --optimize 3 --report_level 2
 # You could uncomment following line and modify the options for hardware debug/profiling
 #DEBUG_OPT := --debug.chipscope krnl_aes_1 --debug.chipscope krnl_acc_1 --debug.protocol all --profile_kernel data:all:all:all:all
 #DEBUG_OPT := --profile_kernel data:all:all:all:all
