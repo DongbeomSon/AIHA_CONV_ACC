@@ -16,21 +16,23 @@ module ifm_parser #(
 //    input init_word, //first hand_shake of axis after conv_start assert
 
     output [OUTPUT_WIDTH-1:0] parse_out,
-    output reg input_req
+    output reg input_req,
+
+	input end_conv
 );
     reg [2:0] reg_cnt;
-	reg [4:0] fm_cnt;
+	reg [6:0] fm_cnt;
 	
 	reg [COMMON_DEN-1:0]   reg_fm;
     reg [OUTPUT_WIDTH-1:0] r_parse_out;
+	reg [INPUT_WIDTH-1:0] reg_file [0:REG_NUM-1];
+
+	always @(*) begin
+		reg_file[reg_cnt] <= fm;
+	end
 	
 	wire [OUTPUT_WIDTH-1:0] fm_array [MAX_CNT-1:0];
 
-
-    always @(*) begin
-		r_parse_out <= fm_array[fm_cnt];
-    end
-	
 	genvar i;
     generate
         for(i = 0; i < MAX_CNT; i=i+1) begin
@@ -38,17 +40,38 @@ module ifm_parser #(
         end
     endgenerate
 
+    always @(*) begin
+		r_parse_out <= fm_array[fm_cnt];
+    end
+
+	wire [INPUT_WIDTH-1:0] r_file [0:REG_NUM-1];
+
+    generate
+        for(i = 0; i < REG_NUM; i=i+1) begin
+            assign r_file[i] = reg_fm[INPUT_WIDTH*(i+1)-1:INPUT_WIDTH*i];
+        end
+    endgenerate
+
+    always @(*) begin
+		r_parse_out <= fm_array[fm_cnt];
+    end
+
     assign parse_out = r_parse_out;
 
+	reg [INPUT_WIDTH-1:0] last_reg_file;
+	reg fm_used_n;
 	always @(posedge clk, negedge rst_n) begin
         if(!rst_n) begin
             input_req <= 0;
             fm_cnt <= 0;
         end else begin
             if (ifm_read) begin
-				if(fm_cnt == MAX_CNT - 6) input_req <= 1;
+//				input_req <= (fm_cnt > MAX_CNT - 1 - REG_NUM) ? 1 : 0;
+				input_req <= (fm_cnt > MAX_CNT - 1 - REG_NUM) & !fm_used_n ? 1 : 0;
                 fm_cnt <= (fm_cnt == MAX_CNT-1) ? 0 : fm_cnt + 1;
-            end
+			end else if (input_req) begin
+				input_req <= (reg_cnt == REG_NUM-1) ? 0 : 1;
+			end
 			if (start_conv_pulse) input_req<=1;
         end
     end
@@ -59,34 +82,67 @@ module ifm_parser #(
         if(!rst_n) begin
             reg_cnt <= 0;
             reg_fm <= 0;
-     
+			last_reg_file <= 0;
+			fm_used_n <= 0;
+			input_req <= 0;
+			fm_cnt <= 0;
 	    end else begin
-			if(input_req) begin
-				case(reg_cnt)
-					0: begin reg_fm[INPUT_WIDTH*1-1:INPUT_WIDTH*0] <= fm; 
-							 reg_fm[COMMON_DEN-1:INPUT_WIDTH*1] <= reg_fm[COMMON_DEN-1:INPUT_WIDTH*1];
-							 reg_cnt <= reg_cnt+1; input_req<=1; end
-					1: begin reg_fm[INPUT_WIDTH*1-1:0] <= reg_fm[INPUT_WIDTH*1-1:0];
-							 reg_fm[INPUT_WIDTH*2-1:INPUT_WIDTH*1] <= fm; 
-							 reg_fm[COMMON_DEN-1:INPUT_WIDTH*2] <= reg_fm[COMMON_DEN-1:INPUT_WIDTH*2];
-					         reg_cnt <= reg_cnt+1; input_req<=1; end
-					2: begin reg_fm[INPUT_WIDTH*2-1:0] <= reg_fm[INPUT_WIDTH*2-1:0];
-							 reg_fm[INPUT_WIDTH*3-1:INPUT_WIDTH*2] <= fm; 
-							 reg_fm[COMMON_DEN-1:INPUT_WIDTH*3] <= reg_fm[COMMON_DEN-1:INPUT_WIDTH*3];
-							 reg_cnt <= reg_cnt+1; input_req<=1; end
-					3: begin reg_fm[INPUT_WIDTH*3-1:0] <= reg_fm[INPUT_WIDTH*3-1:0];
-							 reg_fm[INPUT_WIDTH*4-1:INPUT_WIDTH*3] <= fm; 
-							 reg_fm[COMMON_DEN-1:INPUT_WIDTH*4] <= reg_fm[COMMON_DEN-1:INPUT_WIDTH*4];
-					         reg_cnt <= reg_cnt+1; input_req<=1; end
-					4: begin reg_fm[INPUT_WIDTH*4-1:0] <= reg_fm[INPUT_WIDTH*4-1:0];
-							 reg_fm[INPUT_WIDTH*5-1:INPUT_WIDTH*4] <= fm;  
-					         reg_cnt <= 0; input_req<=0; end
-					default: begin reg_cnt<=0; reg_fm<=0; input_req<=0; end
+			if(start_conv_pulse) input_req <= 1;
+			else begin
+				case({input_req, ifm_read})
+					2'b01:
+						begin
+							fm_cnt <= (fm_cnt == MAX_CNT-1) ? 0 : fm_cnt + 1;
+							input_req <= (fm_cnt == MAX_CNT - 1 - REG_NUM) ? 1 : 0;
+							reg_fm[INPUT_WIDTH*(REG_NUM-1)+:INPUT_WIDTH] <= (fm_cnt == MAX_CNT-1) | (fm_cnt == 0) ? 
+																			((reg_cnt==REG_NUM-1) ? fm : last_reg_file) : reg_fm[INPUT_WIDTH*(REG_NUM-1)+:INPUT_WIDTH];							
+						end
+					2'b11:
+						begin
+							input_req <= (reg_cnt == REG_NUM-1) ? 0 : 1;
+							reg_cnt <= (reg_cnt == REG_NUM-1) ? 0 : reg_cnt + 1;
+							last_reg_file <= (reg_cnt == REG_NUM-1) ? fm : last_reg_file;
+							if(reg_cnt < REG_NUM-1) reg_fm[INPUT_WIDTH*reg_cnt+:INPUT_WIDTH] <= fm;
+							reg_fm[INPUT_WIDTH*(REG_NUM-1)+:INPUT_WIDTH] <= (fm_cnt == MAX_CNT-1) | (fm_cnt == 0) ? 
+																			((reg_cnt==REG_NUM-1) ? fm : last_reg_file) : reg_fm[INPUT_WIDTH*(REG_NUM-1)+:INPUT_WIDTH];
+						end
+					2'b10:
+						begin
+							input_req <= (reg_cnt == REG_NUM-1) ? 0 : 1;
+							reg_cnt <= (reg_cnt == REG_NUM-1) ? 0 : reg_cnt + 1;
+							if(reg_cnt < REG_NUM-1) reg_fm[INPUT_WIDTH*reg_cnt+:INPUT_WIDTH] <= fm;
+							last_reg_file <= (reg_cnt == REG_NUM-1) ? fm : last_reg_file;
+						end
+					default:
+						begin
+							reg_cnt <= reg_cnt;
+							reg_fm <= reg_fm;
+							last_reg_file <= last_reg_file;
+							fm_cnt <= fm_cnt;
+						end
 				endcase
 			end
-			else begin	
-				 reg_fm <= reg_fm; reg_cnt <= reg_cnt;
-			end
+			// if(input_req) begin
+			// 	if(reg_cnt == REG_NUM - 2) begin
+			// 		fm_used_n <= 1;
+			// 	end
+			// 	if(reg_cnt == REG_NUM - 1) begin
+			// 		reg_cnt <= 0;
+			// 		last_reg_file <= fm;
+			// 	end else begin
+			// 		reg_fm[INPUT_WIDTH*reg_cnt+:INPUT_WIDTH] <= fm;
+			// 		reg_cnt <= reg_cnt + 1;
+			// 	end
+			// end
+			// if (ifm_read) begin
+			// 	if(fm_cnt == 1) begin
+			// 		reg_fm[INPUT_WIDTH*(REG_NUM-1)+:INPUT_WIDTH] <= last_reg_file;
+			// 		fm_used_n <= 0;
+			// 	end
+			// end
+			// end else begin
+			// 	 reg_fm <= reg_fm; reg_cnt <= reg_cnt;
+			// end
 		end
 	end
 	

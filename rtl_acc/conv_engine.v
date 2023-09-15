@@ -182,7 +182,7 @@ module conv_engine #(
 
 
     wire    [47:0] wgt;
-    wgt_parser #(.INPUT_WIDTH(512), .OUTPUT_WIDTH(48),  .REG_NUM(3)) wgt_parser(
+    ifm_parser #(.INPUT_WIDTH(512), .OUTPUT_WIDTH(48),  .REG_NUM(3)) wgt_parser(
         .clk    (clk),
         .rst_n  (rst_n),
 		.start_conv_pulse (start_conv_pulse),
