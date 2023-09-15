@@ -124,7 +124,7 @@ ifm_num = 0
 oc_pair = oc//2
 with open("wgt.txt", "w") as f:
     for weight_np in weight_np_l:
-        for i in range(oc_pair):
+        for i in range(0, oc , 2):
             for ii in range(8):
                 for jj in range(num_tile):
                     for j in range(ic):
@@ -132,7 +132,7 @@ with open("wgt.txt", "w") as f:
                             for l in weight_np[i, j, :, k]:
                                 s = str(l) + " "
                                 f.write(s)
-                            for ll in weight_np[i+4, j, :, k]:
+                            for ll in weight_np[i+1, j, :, k]:
                                 s = str(ll) + " "
                                 f.write(s)
                             f.write("\n")
@@ -143,7 +143,7 @@ with open("wgt.txt", "w") as f:
 
 with open("wgt.dat", "wb") as f:
     for weight_np in weight_np_l:
-        for i in range(oc_pair):
+        for i in range(0, oc , 2):
             for ii in range(8):
                 for jj in range(num_tile):
                     for j in range(ic):
@@ -151,7 +151,7 @@ with open("wgt.dat", "wb") as f:
                             for l in weight_np[i, j, :, k]:
                                 f.write(l.astype('int8').tobytes())
                                 ifm_num += 1
-                            for ll in weight_np[i+4, j, :, k]:
+                            for ll in weight_np[i+1, j, :, k]:
                                 f.write(ll.astype('int8').tobytes())
                                 ifm_num += 1
 print("---wgt_num--- %d" % ifm_num)

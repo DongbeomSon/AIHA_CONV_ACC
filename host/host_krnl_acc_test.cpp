@@ -17,6 +17,7 @@
 //#include <openssl/aes.h>
 #include <string.h>
 #include <thread>
+#include <cmath>
 
 // Please use 'xbutil list' command to get the device id of the target alveo card if multiple
 //   cards are installed in the system.
@@ -29,13 +30,25 @@
 #define krnl_acc_arg_WGT_ADDR_BASE   3
 #define krnl_acc_arg_OFM_ADDR_BASE  4
 
+#define BUF_DEPTH 62
+#define OFM_H 62
+#define OFM_W 62
+#define OFM_C 8
+
 #define TI 16
 #define TI_FACTOR 4
+#define KERNEL_SIZE 3
+#define ACC_ROW 8
 
-#define BUF_DEPTH 61
-#define OFM_H 61
-#define OFM_W 61
-#define OFM_C 8
+#define TI_NUM_IFM 10
+#define TI_WIDTH ((TI)+(KERNEL_SIZE)-1)
+#define TI_ROW ceil(double(OFM_H)/ACC_ROW)
+
+#define OFM_PORT_WIDTH 32
+#define OFM_PORT_CYCLE 16
+#define OFM_PORT_BYTE OFM_PORT_WIDTH*OFM_PORT_CYCLE
+
+#define PE_NUM 2
 
 void wait_for_enter(const std::string &msg) {
     std::cout << msg << std::endl;
@@ -54,7 +67,7 @@ void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int g
 
     int ofm [OFM_C][OFM_H+4][OFM_W+4];
 
-    int oc, oh, ow, tw, thcnt;
+    int oc, oh, ow, tw, thcnt, th;
     int i;
     for(int j = 0; j < groups_num; j++){
         oc = 0;
@@ -62,30 +75,47 @@ void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int g
         ow = 0;
         tw = 0;
         thcnt = 0;
+        th = 0;
         i = 0;
         for(int index = 0; index < ofm_len/4; index+=16) {
             if(oc == 8) break;
 //            std::cout <<"test " << index << "  " << oc << "  " << oh << "  " << ow << "  "<< tw << "  " << thcnt << std::endl;
             
 
-            for(int i = 0; i < 16; i++){
-                ofm[oc][oh][i + tw*TI] = write_buffer[ofm_len/4*j + index + i];
+            for(int i = 0; i < 8; i++){
+                // ofm[oc][oh][i + tw*TI] = write_buffer[ofm_len/4*j + index + i];
+                // ofm[oc+1][oh][i + tw*TI] = write_buffer[ofm_len/4*j + index + i+8];
+                ofm[oc][i + th][ow] = write_buffer[ofm_len/4*j + index + i+8];
+                ofm[oc+1][i + th][ow] = write_buffer[ofm_len/4*j + index + i];
             }
-            oh = oh + 1;
-            thcnt = thcnt + 1;
-            if (thcnt == 5){
-                thcnt = 0;
-                tw = tw + 1;
-                oh = oh - 5;
-                if (tw == 4){
-                    tw = 0;
-                    oh = oh + 5;
+
+            ow = ow + 1;
+                if (ow == 64){
+                    ow = 0;
+                    th = th+8;
                 }
-            }
-            if (oh == 65) {
-                oh = 0;
-                oc = oc + 1;
-            }
+                if(th == 64){
+                    th = 0;
+                    oc = oc + 2;
+
+                }
+
+            
+            // oh = oh + 1;
+            // thcnt = thcnt + 1;
+            // if (thcnt == 5){
+            //     thcnt = 0;
+            //     tw = tw + 1;
+            //     oh = oh - 5;
+            //     if (tw == 4){
+            //         tw = 0;
+            //         oh = oh + 5;
+            //     }
+            // }
+            // if (oh == 65) {
+            //     oh = 0;
+            //     oc = oc + 1;
+            // }
         }
 //            std::cout << "re_arranged successful" << std::endl;
         for (int toc=0; toc < OFM_C; toc++) {
@@ -281,9 +311,13 @@ int main(int argc, char *argv[]) {
     ci = 8*(cfg_ci + 1);
     co = 8*(cfg_co + 1);
 
-    int ifm_len = ci * (TI+3) * TI_FACTOR * 13 * 8;
-    int wgt_len = 4*4* ci* co* 13* TI_FACTOR;
-    int ofm_len = 4 * 13 * co * 64 * 5;
+    // int ifm_len = ci * (TI+3) * TI_FACTOR * 13 * 8;
+    // int wgt_len = 4*4* ci* co* 13* TI_FACTOR;
+    // int ofm_len = 4 * 13 * co * 64 * 5;
+    std::cout << ci * TI_WIDTH * TI_FACTOR << std::endl;
+    int ifm_len = ci * TI_WIDTH * TI_FACTOR * TI_ROW * TI_NUM_IFM;
+    int wgt_len = KERNEL_SIZE * KERNEL_SIZE * ci * co * TI_ROW * TI_FACTOR;
+    int ofm_len = TI_FACTOR * TI_ROW * co * OFM_PORT_BYTE;
 
     std::cout << "      ifm size : " << ifm_len * groups_num << std::endl;
     std::cout << "      wgt size : " << wgt_len * groups_num << std::endl;
@@ -333,7 +367,7 @@ int main(int argc, char *argv[]) {
                                                 "krnl_acc",
                                                 xrt::kernel::cu_access_mode::exclusive);
 
-    wait_for_enter("\nPress ENTER to continue after setting up ILA trigger...");
+    // wait_for_enter("\nPress ENTER to continue after setting up ILA trigger...");
     
     // create device buffer objects
     std::cout << "Create input and output device buffers" << std::endl;

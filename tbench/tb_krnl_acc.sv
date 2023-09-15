@@ -557,7 +557,7 @@ initial  begin : main_test_routine
                     for(i = 0; i < 8; i=i+1) begin
                       for(k = 0; k < 4; k=k+1)begin
 						ofm[oc][i+th][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index][(32*(7-i)+(3-k)*8) +: 8];
-						ofm[oc+4][i+th][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index][(32*(15-i)+(3-k)*8) +: 8];
+						ofm[oc+1][i+th][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index][(32*(15-i)+(3-k)*8) +: 8];
                       end
                     end
                     ow = ow + 1;
@@ -567,7 +567,7 @@ initial  begin : main_test_routine
                           end
                           if (th == 64) begin
                               th = 0;
-                              oc = oc + 1;
+                              oc = oc + 2;
                               $display("\033[33m[ConvKernel: ] Computing channel: %d\033[0m", oc);
                           end
                   end

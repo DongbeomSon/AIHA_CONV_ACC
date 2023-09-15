@@ -63,7 +63,6 @@ runsim:
 	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM);
 	./runsim_krnl_xsim.sh $(GROUP_NUM);
 	cd data; python3 ../script/compare.py;
-	cp ./script/compare.py ./data/t1/compare.py; cp ./script/compare.py ./data/t2/compare.py; cd data/t1; python3 ./compare.py; cd ..; cd t2; python3 ./compare.py;
 
 gen_tb:
 	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM);
