@@ -33,7 +33,6 @@ add_files -norecurse \
                             ../rtl_acc/krnl_acc_axi_ctrl_slave.v \
                             ../rtl_acc/krnl_acc.v \
                             ../rtl_acc/ifm_parser.v \
-                            ../rtl_acc/wgt_parser.v \
                             ../rtl_acc/switch_buffer.v \
                             ../rtl_acc/conv_engine.v \
        }
