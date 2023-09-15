@@ -17,7 +17,7 @@ module conv_engine #(
     parameter WGT_BUFF_ADDR_WIDTH  = $clog2(WGT_BUFF_WORD_NUM) + 1,
 
 
-    parameter OUT_DATA_WIDTH = 25,
+    parameter OUT_DATA_WIDTH = 32,
     parameter TI = 16
 ) (
     input           clk,
@@ -91,7 +91,7 @@ module conv_engine #(
 
     switch_buffer  #(
         .DATA_WIDTH (WIFM_DATA_WIDTH),
-        .DATA_NUM_BYTE (63232)
+        .DATA_NUM_BYTE (46080)
    //     .DATA_NUM (IFM_BUFF_WORD_NUM),
    //     .FIFO_ADDR_WIDTH (IFM_BUFF_ADDR_WIDTH)
     ) ifm_buffer (
@@ -124,7 +124,7 @@ module conv_engine #(
 
     switch_buffer #(
         .DATA_WIDTH (WWGT_DATA_WIDTH),
-        .DATA_NUM_BYTE (53248)
+        .DATA_NUM_BYTE (18432)
     //    .DATA_NUM (WGT_BUFF_WORD_NUM),
     //    .FIFO_ADDR_WIDTH (WGT_BUFF_ADDR_WIDTH) //log_2 DATANUM + 1
         ) wgt_buffer(
@@ -166,10 +166,11 @@ module conv_engine #(
         end
     end
 
-    wire    [63:0] ifm;
-    parser ifm_parser(
+    wire    [79:0] ifm;
+    ifm_parser #(.INPUT_WIDTH(512), .OUTPUT_WIDTH(80), .REG_NUM(5)) ifm_parser(
         .clk    (clk),
         .rst_n  (rst_n),
+		.start_conv_pulse (start_conv_pulse),
 
         .fm     (wrapped_ifm),
         .ifm_read (ifm_read),
@@ -180,10 +181,11 @@ module conv_engine #(
     );
 
 
-    wire    [31:0] wgt;
-    parser #(.OUTPUT_WIDTH(32)) wgt_parser(
+    wire    [47:0] wgt;
+    wgt_parser #(.INPUT_WIDTH(512), .OUTPUT_WIDTH(48),  .REG_NUM(3)) wgt_parser(
         .clk    (clk),
         .rst_n  (rst_n),
+		.start_conv_pulse (start_conv_pulse),
 
         .fm     (wrapped_wgt),
         .ifm_read (wgt_read),
@@ -193,9 +195,10 @@ module conv_engine #(
         .input_req (wrapped_wgt_req)
     );
 
-    wire [24:0] ofm_port0;
-    wire [24:0] ofm_port1;
-
+    wire [255:0] ofm0_port;
+    wire [255:0] ofm1_port;
+	wire         ofm0_port_v;
+	wire         ofm1_port_v;
     CONV_ACC #(
         .out_data_width(OUT_DATA_WIDTH),
         .buf_addr_width(5),
@@ -208,10 +211,10 @@ module conv_engine #(
         .cfg_co(r_cfg_co),
         .ifm(ifm),
         .weight(wgt),
-        .ofm_port0(ofm_port0),
-        .ofm_port1(ofm_port1),
-        .ofm_port0_v(ofm_port0_v),
-        .ofm_port1_v(ofm_port1_v),
+        .ofm0_port(ofm0_port),
+        .ofm1_port(ofm1_port),
+        .ofm0_port_v(ofm0_port_v),
+        .ofm1_port_v(ofm1_port_v),
         .ifm_read(ifm_read),
         .wgt_read(wgt_read),
         .end_op(end_conv)
@@ -230,8 +233,7 @@ module conv_engine #(
         end else begin
             ifm_counter <= ifm_read ? ifm_counter + 1 : ifm_counter;
             wgt_counter <= wgt_read ? wgt_counter + 1 : wgt_counter;
-            ofm_counter <= ofm_port0_v ? (ofm_port1_v ? ofm_counter + 2 : ofm_counter + 1) 
-                                        : ofm_counter;
+            ofm_counter <= ofm0_port_v & ofm1_port_v ? ofm_counter + 16 : ofm_counter;
         end
     end
 
@@ -241,11 +243,11 @@ module conv_engine #(
         .clk(clk),
         .rst_n(rst_n),
 
-        .ofm_port0_v(ofm_port0_v),
-        .ofm_port1_v(ofm_port1_v),
+        .ofm0_port_v(ofm0_port_v),
+        .ofm1_port_v(ofm1_port_v),
 
-        .ofm_port0(ofm_port0),
-        .ofm_port1(ofm_port1),
+        .ofm0_port(ofm0_port),
+        .ofm1_port(ofm1_port),
 
         .end_conv(end_conv),
 

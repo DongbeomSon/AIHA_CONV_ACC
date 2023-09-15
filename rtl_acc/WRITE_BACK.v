@@ -11,26 +11,44 @@ module WRITE_BACK #(
     input  rst_n,
     input  start_init,
     input  p_filter_end,
-    input  [data_width-1:0] row0,
-    input  row0_valid,
-    input  [data_width-1:0] row1,
-    input  row1_valid,
-    input  [data_width-1:0] row2,
-    input  row2_valid,
-    input  [data_width-1:0] row3,
-    input  row3_valid,
-    input  [data_width-1:0] row4,
-    input  row4_valid,
-    output p_write_zero0,
-    output p_write_zero1,
-    output p_write_zero2,
-    output p_write_zero3,
-    output p_write_zero4,
+    input  [data_width-1:0] ofm0_row0,
+    input  ofm0_row0_valid,
+    input  [data_width-1:0] ofm0_row1,
+    input  ofm0_row1_valid,
+    input  [data_width-1:0] ofm0_row2,
+    input  ofm0_row2_valid,
+    input  [data_width-1:0] ofm0_row3,
+    input  ofm0_row3_valid,
+    input  [data_width-1:0] ofm0_row4,
+    input  ofm0_row4_valid,
+	input  [data_width-1:0] ofm0_row5,
+    input  ofm0_row5_valid,
+	input  [data_width-1:0] ofm0_row6,
+    input  ofm0_row6_valid,
+	input  [data_width-1:0] ofm0_row7,
+    input  ofm0_row7_valid,
+    input  [data_width-1:0] ofm1_row0,
+    input  ofm1_row0_valid,
+    input  [data_width-1:0] ofm1_row1,
+    input  ofm1_row1_valid,
+    input  [data_width-1:0] ofm1_row2,
+    input  ofm1_row2_valid,
+    input  [data_width-1:0] ofm1_row3,
+    input  ofm1_row3_valid,
+    input  [data_width-1:0] ofm1_row4,
+    input  ofm1_row4_valid,
+	input  [data_width-1:0] ofm1_row5,
+    input  ofm1_row5_valid,
+	input  [data_width-1:0] ofm1_row6,
+    input  ofm1_row6_valid,
+	input  [data_width-1:0] ofm1_row7,
+    input  ofm1_row7_valid,
+    output p_write_zero,
     output p_init,
-    output [data_width-1:0] out_port0,
-    output [data_width-1:0] out_port1,
-    output port0_valid,
-    output port1_valid,
+    output [255:0] ofm0_out_port,
+    output ofm0_port_valid,
+    output [255:0] ofm1_out_port,
+    output ofm1_port_valid,
     output start_conv,
     output odd_cnt,
 
@@ -44,19 +62,15 @@ module WRITE_BACK #(
     localparam START_CONV   = 4'd2;
     localparam WAIT_ADD     = 4'd3;
     localparam WAIT_WRITE0    = 4'd4;
-    localparam ROW_0_1      = 4'd5;
-    localparam CLEAR_0_1    = 4'd6;
-    localparam ROW_2_3      = 4'd7;
-    localparam CLEAR_2_3    = 4'd8;
-    localparam ROW_5        = 4'd9;
-    localparam CLEAR_START_CONV = 4'd10;
-    localparam CLEAR_CNT    = 4'd11;
-    localparam FINISH       = 4'd12;
-    localparam END_CONV       = 4'd13;
+    localparam ROW          = 4'd5;
+    localparam CLEAR_START_CONV = 4'd6;
+    localparam CLEAR_CNT    = 4'd7;
+    localparam FINISH       = 4'd8;
+    localparam END_CONV       = 4'd9;
 
     // localparam DONE         = 4'b1001;
     /// machine state
-
+	
     reg [3:0] st_next;
     reg [3:0] st_cur;
     reg [7:0] cnt;
@@ -100,28 +114,14 @@ module WRITE_BACK #(
             WAIT_WRITE0:
                 st_next = CLEAR_CNT;
             CLEAR_CNT:
-                st_next = ROW_0_1;
-            ROW_0_1:
-                if (cnt == depth-1)
-                    st_next = CLEAR_0_1;
-                else
-                    st_next = ROW_0_1;
-            CLEAR_0_1:
-                st_next = ROW_2_3;
-            ROW_2_3:
-                if (cnt == depth-1)
-                    st_next = CLEAR_2_3;
-                else
-                    st_next = ROW_2_3;
-            CLEAR_2_3:
-                st_next = ROW_5;
-            ROW_5:
+                st_next = ROW;
+            ROW:
                 if (cnt == depth-1)
                     st_next = r_end_conv ? FINISH : CLEAR_START_CONV;
                 else
-                    st_next = ROW_5;
+                    st_next = ROW;
             FINISH:
-                    st_next = !port0_valid ? END_CONV : FINISH;
+                    st_next = !ofm0_port_valid ? END_CONV : FINISH;
             END_CONV:
                     st_next = IDLE;
             // DONE:
@@ -131,16 +131,10 @@ module WRITE_BACK #(
         endcase
     end
     /// Output logic
-    reg p_write_zero0_r;
-    reg p_write_zero1_r;
-    reg p_write_zero2_r;
-    reg p_write_zero3_r;
-    reg p_write_zero4_r;
+    reg p_write_zero_r;
     reg p_init_r;
-    reg [data_width-1:0] out_port0_r;
-    reg [data_width-1:0] out_port1_r;
-    reg port0_valid_r;
-    reg port1_valid_r;
+    reg [255:0] out_port_r;
+    reg port_valid_r;
     reg start_conv_r;
 
     /// Output start conv signal
@@ -167,42 +161,15 @@ module WRITE_BACK #(
     /// Output zero flag signals
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            p_write_zero0_r <= 0;
-            p_write_zero1_r <= 0;
-        end else if (st_cur == ROW_0_1) begin
-            p_write_zero0_r <= 1;  
-            p_write_zero1_r <= 1;
+            p_write_zero_r <= 0;
+        end else if (st_cur == ROW) begin
+            p_write_zero_r <= 1;  
         end else begin
-            p_write_zero0_r <= 0;
-            p_write_zero1_r <= 0;
+            p_write_zero_r <= 0;
         end
     end
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            p_write_zero2_r <= 0;
-            p_write_zero3_r <= 0;
-        end else if (st_cur == ROW_2_3) begin
-            p_write_zero2_r <= 1;  
-            p_write_zero3_r <= 1;
-        end else begin
-            p_write_zero2_r <= 0;
-            p_write_zero3_r <= 0;
-        end
-    end
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            p_write_zero4_r <= 0;
-        end else if (st_cur == ROW_5) begin
-            p_write_zero4_r <= 1;  
-        end else begin
-            p_write_zero4_r <= 0;
-        end
-    end
-    assign p_write_zero0 = p_write_zero0_r;
-    assign p_write_zero1 = p_write_zero1_r;
-    assign p_write_zero2 = p_write_zero2_r;
-    assign p_write_zero3 = p_write_zero3_r;
-    assign p_write_zero4 = p_write_zero4_r;   
+    
+    assign p_write_zero = p_write_zero_r; 
     /// Init buffer signal, why this signal? since, at the beginning, the buffer is empty, we only need to
     /// push zero to buffer without read from it, this behaviour is difference from p_write_zerox signals
     always @(posedge clk or negedge rst_n) begin
@@ -218,8 +185,8 @@ module WRITE_BACK #(
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n)
             cnt <= 0;
-        else if (st_cur == IDLE || st_cur == CLEAR_0_1  || st_cur == CLEAR_START_CONV
-            || st_cur == CLEAR_2_3 || st_cur == CLEAR_CNT || st_cur == FINISH)
+        else if (st_cur == IDLE ||  st_cur == CLEAR_START_CONV
+            || st_cur == CLEAR_CNT || st_cur == FINISH)
             cnt <= 0;
         else 
             cnt <= cnt + 1;
@@ -245,44 +212,60 @@ module WRITE_BACK #(
         else r_end_conv <= r_end_conv ? 1 : end_conv;
     end
 
+	wire ofm0_row_valid = (ofm0_row0_valid & ofm0_row1_valid & ofm0_row2_valid & ofm0_row3_valid 
+						  & ofm0_row4_valid & ofm0_row5_valid & ofm0_row6_valid & ofm0_row7_valid);	
+	wire ofm1_row_valid = (ofm1_row0_valid & ofm1_row1_valid & ofm1_row2_valid & ofm1_row3_valid 
+					      & ofm1_row4_valid & ofm1_row5_valid & ofm1_row6_valid & ofm1_row7_valid);	
+		
+	reg [255:0] ofm0_out_port_r;	
+	reg [255:0] ofm1_out_port_r;
+	reg         ofm0_port_valid_r;
+	reg         ofm1_port_valid_r;
     /// Final result, a big mux
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            out_port0_r <= 0;
-            out_port1_r <= 0;
-            port0_valid_r <= 0;
-            port1_valid_r <= 0;
+            ofm0_out_port_r <= 0;
+			ofm0_port_valid_r <= 0;
+			ofm1_out_port_r <= 0;
+			ofm1_port_valid_r <= 0;
         end else begin
-            case({row0_valid, row1_valid, row2_valid, row3_valid, row4_valid})
-                5'b11000 : begin
-                    out_port0_r <= row0;
-                    out_port1_r <= row1;
-                    port0_valid_r <= row0_valid;
-                    port1_valid_r <= row1_valid;
-                end
-                5'b00110 : begin
-                    out_port0_r <= row2;
-                    out_port1_r <= row3;
-                    port0_valid_r <= row2_valid;
-                    port1_valid_r <= row3_valid;
-                end
-                5'b00001 : begin
-                    out_port0_r <= row4;
-                    out_port1_r <= 0;
-                    port0_valid_r <= row4_valid;
-                    port1_valid_r <= 0;
-                end
-                default : begin
-                    out_port0_r <= 0;
-                    out_port1_r <= 0;
-                    port0_valid_r <= 0;
-                    port1_valid_r <= 0;
-                end    
-            endcase
-        end
+            if(ofm0_row_valid)
+                begin
+                    ofm0_out_port_r[31:0] <= ofm0_row0;
+					ofm0_out_port_r[63:32] <= ofm0_row1;
+					ofm0_out_port_r[95:64] <= ofm0_row2;
+					ofm0_out_port_r[127:96] <= ofm0_row3;
+					ofm0_out_port_r[159:128] <= ofm0_row4;
+					ofm0_out_port_r[191:160] <= ofm0_row5;
+					ofm0_out_port_r[223:192] <= ofm0_row6;
+					ofm0_out_port_r[255:224] <= ofm0_row7;
+					
+					ofm0_port_valid_r <= ofm0_row_valid;
+				end
+			if(ofm1_row_valid)
+				begin
+					ofm1_out_port_r[31:0] <= ofm1_row0;
+					ofm1_out_port_r[63:32] <= ofm1_row1;
+					ofm1_out_port_r[95:64] <= ofm1_row2;
+					ofm1_out_port_r[127:96] <= ofm1_row3;
+					ofm1_out_port_r[159:128] <= ofm1_row4;
+					ofm1_out_port_r[191:160] <= ofm1_row5;
+					ofm1_out_port_r[223:192] <= ofm1_row6;
+					ofm1_out_port_r[255:224] <= ofm1_row7;
+					
+					ofm1_port_valid_r <= ofm1_row_valid;
+				end
+			else
+				begin
+					ofm0_out_port_r <= 0;
+					ofm0_port_valid_r <= 0;
+					ofm1_out_port_r <= 0;
+					ofm1_port_valid_r <= 0;
+				end
+		end
     end
-    assign out_port0 = out_port0_r;
-    assign out_port1 = out_port1_r;
-    assign port0_valid = port0_valid_r;
-    assign port1_valid = port1_valid_r;
+    assign ofm0_out_port = ofm0_out_port_r;
+    assign ofm0_port_valid = ofm0_port_valid_r;
+	assign ofm1_out_port = ofm1_out_port_r;
+    assign ofm1_port_valid = ofm1_port_valid_r;
 endmodule

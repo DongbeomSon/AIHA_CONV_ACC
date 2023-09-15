@@ -13,20 +13,20 @@
 `define TI_FACTOR 64/`TI
 `define CFG_CI (`CI+1)*8
 `define CFG_CO (`CO+1)*8
-`define IFM_LEN `CFG_CI*(`TI+3)*`TI_FACTOR*13*8
-`define WGT_LEN 4*4*`CFG_CI*`CFG_CO*13*`TI_FACTOR
+`define IFM_LEN `CFG_CI*(`TI+2)*`TI_FACTOR*10*8
+`define WGT_LEN 3*3*`CFG_CI*`CFG_CO*8*`TI_FACTOR
 
 `define IFM_LEN_WORD `IFM_LEN/64
 `define WGT_LEN_WORD `WGT_LEN/64
 
-`define BUF_DEPTH 61
+`define BUF_DEPTH 62
 `define OFM_C `CFG_CO
 `define OFM_H `BUF_DEPTH
 `define OFM_W `BUF_DEPTH
-`define OUT_DATA_WIDTH 25
+`define OUT_DATA_WIDTH 32
 
 //`define OFM_LEN `OFM_H*`OFM_W*`CFG_CO*4
-`define OFM_LEN 133120
+`define OFM_LEN 131072
 
 `define OFM_LEN_WORD `OFM_LEN/64
 
@@ -465,7 +465,7 @@ end
   endtask
 
 
-    reg signed [31:0] ofm [0:`OFM_C-1][0:`OFM_H-1][0:`OFM_W-1];
+    reg signed [31:0] ofm [0:`OFM_C-1][0:`OFM_H+1][0:`OFM_W+1];
     integer toc;
     integer toh;
     integer tow;
@@ -493,7 +493,7 @@ initial  begin : main_test_routine
     int fp_w;
 
     int toc, toh, tow;
-    int oc, oh, tw, index;
+    int oc, th, ow, index;
     int thcnt;
 
 //    file_ptr = $fopen("./script/test/ifm.dat", "rb");
@@ -532,12 +532,14 @@ initial  begin : main_test_routine
 
     // dump output buffer memory data
     out_buffer_dump_memory(ofm_buffer, OUT_BUFFER_BASE2, ofm_data, 0, `OFM_LEN_WORD*`GROUP_NUM);
-
+	
+	
     #1000
     $display("-------------------------------------------------------------------------------------");
     $display("  PROCESS COMPLITED    ");
     $display("-------------------------------------------------------------------------------------");
-  
+	
+	
 
     //Data compare
     fp_w = $fopen("./data/conv_acc_out.txt");
@@ -548,29 +550,23 @@ initial  begin : main_test_routine
                   toh = 0;
                   tow = 0;
                   oc = 0;
-                  oh = 0;
-                  tw = 0;
+                  th = 0;
+                  ow = 0;
                   thcnt = 0;
                   for(index = 0; index < `OFM_LEN_WORD; index++) begin
-                    for(i = 0; i < 16; i=i+1) begin
-//                      ofm[oc][oh][i+tw*`TI] = ofm_data[`OFM_LEN_WORD*j + index][32*(i+1)-1 -: 32];
+                    for(i = 0; i < 8; i=i+1) begin
                       for(k = 0; k < 4; k=k+1)begin
-                        ofm[oc][oh][i+tw*`TI][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index][(32*(15-i)+(3-k)*8) +: 8];
+						ofm[oc][i+th][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index][(32*(7-i)+(3-k)*8) +: 8];
+						ofm[oc+4][i+th][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index][(32*(15-i)+(3-k)*8) +: 8];
                       end
                     end
-                    oh = oh + 1;
-                    thcnt = thcnt + 1;
-                          if (thcnt == 5) begin
-                              thcnt = 0;
-                              tw = tw + 1;
-                              oh = oh - 5;
-                              if (tw == 4) begin
-                                  tw = 0;
-                                  oh = oh + 5;
-                              end
+                    ow = ow + 1;
+                          if (ow == 64) begin
+                              ow = 0;
+                              th = th + 8;
                           end
-                          if (oh == 65) begin
-                              oh = 0;
+                          if (th == 64) begin
+                              th = 0;
                               oc = oc + 1;
                               $display("\033[33m[ConvKernel: ] Computing channel: %d\033[0m", oc);
                           end

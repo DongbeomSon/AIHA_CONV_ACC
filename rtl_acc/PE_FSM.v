@@ -63,14 +63,14 @@ begin
     next_state = 3'bx; 
     case(current_state)
         IDLE: 
-            if(start_again && cnt1 == 0 && cnt2 == 0 && cnt3 == co*52)
+            if(start_again && cnt1 == 0 && cnt2 == 0 && cnt3 == co*26)
                 next_state = FINISH;
             else if(start_again)
                 next_state = S1;
             else
                 next_state = IDLE;
         S1: 
-            next_state = (cnt1 == 4) ? S2 : S1;
+            next_state = (cnt1 == 3) ? S2 : S1;
         S2:
             if(cnt2 == 0 && cnt1 == 0)
                 next_state = IDLE;
@@ -97,8 +97,8 @@ always @ (posedge clk or negedge rst_n)
                 S1: 
                 begin
                     {ifm_read, wgt_read, end_conv} <= 3'b110;
-                    p_valid <= (cnt1 < 3) ? 0 : 1; 
-                    last_chanel <= (cnt1 == 3 && cnt2 == 0) ? 1 : 0; 
+                    p_valid <= (cnt1 < 2) ? 0 : 1; 
+                    last_chanel <= (cnt1 == 2 && cnt2 == 0) ? 1 : 0; 
                 end
                 S2:
                     begin
@@ -130,7 +130,7 @@ always @ (posedge clk or negedge rst_n)
             end else if(next_state == IDLE)
                 cnt1 <= 0;
             else begin
-                if (cnt1 == tile_length + 2)
+                if (cnt1 == tile_length + 1)
                     cnt1 <= 0;
                 else      
                     cnt1 <= cnt1 + 1;

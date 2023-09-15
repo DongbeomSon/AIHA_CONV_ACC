@@ -12,7 +12,6 @@ module PSUM_ADD #(
     input signed [data_width-1:0] pe0_data,
     input signed [data_width-1:0] pe1_data,
     input signed [data_width-1:0] pe2_data,
-    input signed [data_width-1:0] pe3_data,
     input signed [data_width-1:0] fifo_data,
     output signed [data_width-1:0] out
 );
@@ -32,7 +31,7 @@ module PSUM_ADD #(
             out_r   <= 0;
         end else begin
             psum0 <= pe0_data + pe1_data;
-            psum1 <= pe2_data + pe3_data;
+            psum1 <= pe2_data;
             psum2 <= psum0 + psum1;
             out_r <= fifo_data + psum2;
         end

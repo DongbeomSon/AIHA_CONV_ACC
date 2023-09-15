@@ -12,9 +12,9 @@ export TI=16
 export TI_FACTOR=$[64/$TI]
 export CFG_CI=$[$[$CI+1] * 8]
 export CFG_CO=$[$[$CO+1] * 8]
-export IFM_LEN=$[$[$TI+3]*$CFG_CI*$TI_FACTOR*13*8]
-export WGT_LEN=$[4*4*$CFG_CI*$CFG_CO*13*$TI_FACTOR]
-export OFM_LEN=$[61*61*$CFG_CO*4]
+export IFM_LEN=$[$[$TI+2]*$CFG_CI*$TI_FACTOR*10*8]
+export WGT_LEN=$[3*3*$CFG_CI*$CFG_CO*8*$TI_FACTOR]
+export OFM_LEN=$[62*62*$CFG_CO*4]
 # export GROUP_NUM=1
 export GROUP_NUM=$1
 
