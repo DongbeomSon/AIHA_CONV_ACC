@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import sys
+import math
 
 group_num = sys.argv[1]
 group_num = int(group_num)
@@ -25,6 +26,10 @@ oh = 62
 ow = 62
 
 kk = 3
+
+pe_row = 8
+
+tile_row = math.ceil(oh/pe_row)
 
 conv2d = nn.Conv2d(in_channels=ic, out_channels=oc, kernel_size=kk, padding=0, bias=False)
 relu = nn.ReLU(inplace=False)
@@ -84,7 +89,7 @@ num_tile = 64//tile_length
 ifm_num = 0
 with open("ifm.txt", "w") as f:
     for ifm_np in ifm_np_l:
-        for ii in range(8):
+        for ii in range(tile_row):
             for jj in range(num_tile):
                 for c in range(ic):
                     for j in range(tile_length + 2):
@@ -104,7 +109,7 @@ with open("ifm.txt", "w") as f:
 # byte write
 with open("ifm.dat", "wb") as f:
     for ifm_np in ifm_np_l:
-        for ii in range(8):
+        for ii in range(tile_row):
             for jj in range(num_tile):
                 for c in range(ic):
                     for j in range(tile_length + 2):
@@ -125,7 +130,7 @@ oc_pair = oc//2
 with open("wgt.txt", "w") as f:
     for weight_np in weight_np_l:
         for i in range(0, oc , 2):
-            for ii in range(8):
+            for ii in range(tile_row):
                 for jj in range(num_tile):
                     for j in range(ic):
                         for k in range(kk):
@@ -144,7 +149,7 @@ with open("wgt.txt", "w") as f:
 with open("wgt.dat", "wb") as f:
     for weight_np in weight_np_l:
         for i in range(0, oc , 2):
-            for ii in range(8):
+            for ii in range(tile_row):
                 for jj in range(num_tile):
                     for j in range(ic):
                         for k in range(kk):
@@ -171,42 +176,42 @@ with open("ofm.txt", "w") as f:
 print("---ofm_num--- %d" % ofm)
 
 
-#write byte ver
-with open("ifm_bin.txt", "w") as f:
-    for ifm_np in ifm_np_l:
-        for ii in range(13):
-            for jj in range(num_tile):
-                for c in range(ic):
-                    for j in range(tile_length + 2):
-                        col = jj*tile_length + j
-                        for i in range(8):
-                            row = ii*5+i
-                            # print(row, c, ii)
-                            k = ifm_np[0, c, row, col] if ((row < 64) and (col < 64))else 0
-                            s = np.binary_repr(k, 8) + " "
-                            f.write(s)
-                            ifm_num += 1
-                        f.write("\n")
-                f.write("\n")    
-            f.write("\n")
-        f.write("\n")
+# #write byte ver
+# with open("ifm_bin.txt", "w") as f:
+#     for ifm_np in ifm_np_l:
+#         for ii in range(13):
+#             for jj in range(num_tile):
+#                 for c in range(ic):
+#                     for j in range(tile_length + 2):
+#                         col = jj*tile_length + j
+#                         for i in range(8):
+#                             row = ii*5+i
+#                             # print(row, c, ii)
+#                             k = ifm_np[0, c, row, col] if ((row < 64) and (col < 64))else 0
+#                             s = np.binary_repr(k, 8) + " "
+#                             f.write(s)
+#                             ifm_num += 1
+#                         f.write("\n")
+#                 f.write("\n")    
+#             f.write("\n")
+#         f.write("\n")
 
-print("---ifm_num--- %d" % ifm_num)
-ifm_num = 0
+# print("---ifm_num--- %d" % ifm_num)
+# ifm_num = 0
 
-with open("wgt_bin.txt", "w") as f:
-    for weight_np in weight_np_l:
-        for i in range(oc):
-            for ii in range(13):
-                for jj in range(num_tile):
-                    for j in range(ic):
-                        for k in range(kk):
-                            for l in weight_np[i, j, :, k]:
-                                s = np.binary_repr(l, 8) + " "
-                                f.write(s)
-                                ifm_num += 1
-                            f.write("\n")
-                        f.write("\n")
-                    f.write("\n")
-                f.write("\n")
-            f.write("\n")
+# with open("wgt_bin.txt", "w") as f:
+#     for weight_np in weight_np_l:
+#         for i in range(oc):
+#             for ii in range(13):
+#                 for jj in range(num_tile):
+#                     for j in range(ic):
+#                         for k in range(kk):
+#                             for l in weight_np[i, j, :, k]:
+#                                 s = np.binary_repr(l, 8) + " "
+#                                 f.write(s)
+#                                 ifm_num += 1
+#                             f.write("\n")
+#                         f.write("\n")
+#                     f.write("\n")
+#                 f.write("\n")
+#             f.write("\n")
