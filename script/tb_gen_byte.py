@@ -84,7 +84,7 @@ for x in ofm_relu:
 # write data as a 2's complement binary representation type
 
 tile_length = 16
-num_tile = 64//tile_length
+num_tile = math.ceil(iw/tile_length)
 
 ifm_num = 0
 with open("ifm.txt", "w") as f:
@@ -92,10 +92,10 @@ with open("ifm.txt", "w") as f:
         for ii in range(tile_row):
             for jj in range(num_tile):
                 for c in range(ic):
-                    for j in range(tile_length + 2):
+                    for j in range(tile_length + kk - 1):
                         col = jj*tile_length + j
-                        for i in range(10):
-                            row = ii*8+i
+                        for i in range(pe_row + kk - 1):
+                            row = ii*pe_row+i
                             # print(row, c, ii)
                             k = ifm_np[0, c, row, col] if ((row < 64) and (col < 64)) else 0
                             s = str(k) + " "
@@ -112,10 +112,10 @@ with open("ifm.dat", "wb") as f:
         for ii in range(tile_row):
             for jj in range(num_tile):
                 for c in range(ic):
-                    for j in range(tile_length + 2):
+                    for j in range(tile_length + kk - 1):
                         col = jj*tile_length + j
-                        for i in range(10):
-                            row = ii*8+i
+                        for i in range(pe_row + kk - 1):
+                            row = ii*pe_row+i
                             # print(row, c, ii)
                             k = ifm_np[0, c, row, col] if ((row < 64) and (col < 64)) else np.int64(0)
                             f.write(k.astype('int8').tobytes())
