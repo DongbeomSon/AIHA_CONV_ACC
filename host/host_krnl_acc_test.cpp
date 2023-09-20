@@ -60,15 +60,27 @@ void wrrite_ofm_validate_test(int* arr, int size){
         std::cout << "idx : " << i << " : " << std::hex << arr[i] << std::endl;
     }
 }
+
+// compute time duration
+float time_dura(timeval start_time, timeval end_time)
+{
+    return ((end_time.tv_sec - start_time.tv_sec) * 1000 * 1000 + end_time.tv_usec - start_time.tv_usec) / 1000.0;
+}
+
+
 // function to write binary file
-void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int groups_num)
+float write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int groups_num)
 {
     std::ofstream file(file_name);
 
+    float re_time = 0;
+    struct timeval kernels_start_time, kernels_finish_time; // kernel execution time record
+    
     int ofm [OFM_C][OFM_H+4][OFM_W+4];
 
     int oc, oh, ow, tw, thcnt, th;
     int i;
+    gettimeofday(&kernels_start_time, NULL);
     for(int j = 0; j < groups_num; j++){
         oc = 0;
         oh = 0;
@@ -117,7 +129,10 @@ void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int g
             //     oc = oc + 1;
             // }
         }
-//            std::cout << "re_arranged successful" << std::endl;
+        gettimeofday(&kernels_finish_time, NULL);
+        re_time += time_dura(kernels_start_time, kernels_finish_time); 
+
+        std::cout << "re_arranged successful" << std::endl;
         for (int toc=0; toc < OFM_C; toc++) {
             file << "\n\n";
             for (int toh=0; toh < OFM_H; toh++){
@@ -132,6 +147,8 @@ void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int g
     }
 
     file.close();
+
+    return re_time;
 }
 
 // function to ofm int array
@@ -162,12 +179,6 @@ int data_compare (char *out_data, char *ref_data, int byte_num) {
         }
     }
     return err_num;
-}
-
-// compute time duration
-float time_dura(timeval start_time, timeval end_time)
-{
-    return ((end_time.tv_sec - start_time.tv_sec) * 1000 * 1000 + end_time.tv_usec - start_time.tv_usec) / 1000.0;
 }
 
 void print_help(void) {
@@ -367,7 +378,7 @@ int main(int argc, char *argv[]) {
                                                 "krnl_acc",
                                                 xrt::kernel::cu_access_mode::exclusive);
 
-    // wait_for_enter("\nPress ENTER to continue after setting up ILA trigger...");
+    wait_for_enter("\nPress ENTER to continue after setting up ILA trigger...");
     
     // create device buffer objects
     std::cout << "Create input and output device buffers" << std::endl;
@@ -424,11 +435,13 @@ int main(int argc, char *argv[]) {
     // } else {
     //     std::cout << "Data validation SUCCESS" << std::endl;
     // }
-    write_ofm_file("./data/hw_conv.txt", ofm_len, ofm, groups_num);
+    float re_time;
+    re_time = write_ofm_file("./data/hw_conv.txt", ofm_len, ofm, groups_num);
     //wrrite_ofm_validate_test(ofm, ofm_len);
     std::cout << "CONVOLUTION OUTPUT GENERATED" << std::endl;
     
     std::cout << "Execution time = " << total_run_time << " ms" << std::endl;
+    std::cout << "Re_arrange time = " << re_time << " ms" << std::endl;
 
     int excution = (64 - 4 + 1) * (64 - 4 + 1); // (64 - 4 + 1) * (64 - 4 + 1) * 16 * 8 * 8 = 61 * 61 KB
     std::cout << "Total # of processing " << excution * groups_num << "KB" << std::endl;
