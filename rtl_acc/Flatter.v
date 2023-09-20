@@ -1,5 +1,6 @@
 module flatter #(
-    parameter WORD_BYTE = 64
+    parameter WORD_BYTE = 64,
+    parameter WORD_NUM = 16
     )
     (
     input clk,
@@ -69,7 +70,7 @@ module flatter #(
 
     always @(*) begin
         wmst_addr = wmst_offset + addr_cnt * WORD_BYTE; // 64 byte = 512bit
-        wmst_xfer_size = WORD_BYTE * 2; //addr_cnt_temp * WORD_BYTE;
+        wmst_xfer_size = WORD_BYTE * WORD_NUM; //addr_cnt_temp * WORD_BYTE;
     end
 	
 	    always @(posedge clk, negedge rst_n) begin
@@ -83,9 +84,9 @@ module flatter #(
                 if(r_end_conv & out_fifo_empty) begin
                     addr_cnt <= 0;
                 end else begin
-                    addr_cnt <= addr_cnt + 2;
+                    addr_cnt <= addr_cnt + WORD_NUM;
                 end
-            end else if(out_fifo_data_cnt > 1 & !flag_wmst_req) begin
+            end else if(out_fifo_data_cnt > WORD_NUM-1 & !flag_wmst_req) begin
                 flag_wmst_req <= 1;
                 r_wmst_req <= 1;
             end else if (r_wmst_req) begin
@@ -106,5 +107,23 @@ module flatter #(
             end
         end
     end
-	
+
+
+
+	// // ILA monitoring combinatorial adder
+	// ila_0 i_ila_0 (
+	// 	.clk(clk),              // input wire        clk
+	// 	.probe0(wmst_addr),           // input wire [63:0]  probe0  
+	// 	.probe1(end_conv), // input wire [0:0]  probe1 
+	// 	.probe2(r_end_conv),   // input wire [0:0]  probe2 
+	// 	.probe3(addr_cnt),    // input wire [31:0] probe3 
+	// 	.probe4(out_fifo_push_data),     // input wire [511:0]  probe4 
+	// 	.probe5(ofm0_port_v),   // input wire [0:0]  probe5 
+	// 	.probe6(ofm1_port_v),       // input wire [0:0] probe6
+  	// 	.probe7(out_fifo_data_cnt),     // input wire [9:0]  probe7 
+	// 	.probe8(tdata),   // input wire [511:0]  probe8 
+    //     .probe9(wmst_req), // input wire [0:0] probe9
+    //     .probe10(out_fifo_empty), // input wire[0:0] probe10
+    //     .probe11(out_fifo_full) // input wire[0:0] probe11
+	// );
 endmodule
