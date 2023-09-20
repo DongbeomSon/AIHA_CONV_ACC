@@ -10,6 +10,17 @@ create_project krnl_acc ./krnl_acc -part [lindex $argv 0]
 
 # add design sources into project
 #              ../rtl/cbc_engine.v 
+
+create_ip -name ila -vendor xilinx.com -library ip -version 6.2 -module_name ila_0
+set_property -dict [list CONFIG.C_PROBE8_WIDTH {512} CONFIG.C_PROBE7_WIDTH {10} \
+CONFIG.C_PROBE4_WIDTH {512} CONFIG.C_PROBE3_WIDTH {32} CONFIG.C_PROBE0_WIDTH {64}\
+CONFIG.C_NUM_OF_PROBES {12} CONFIG.C_EN_STRG_QUAL {1} CONFIG.C_INPUT_PIPE_STAGES {2} \
+CONFIG.C_ADV_TRIGGER {true} CONFIG.ALL_PROBE_SAME_MU_CNT {4} CONFIG.C_PROBE11_MU_CNT {4} \
+CONFIG.C_PROBE10_MU_CNT {4} CONFIG.C_PROBE9_MU_CNT {4} \
+CONFIG.C_PROBE8_MU_CNT {4} CONFIG.C_PROBE7_MU_CNT {4} CONFIG.C_PROBE6_MU_CNT {4} \
+CONFIG.C_PROBE5_MU_CNT {4} CONFIG.C_PROBE4_MU_CNT {4} CONFIG.C_PROBE3_MU_CNT {4} \
+CONFIG.C_PROBE2_MU_CNT {4} CONFIG.C_PROBE1_MU_CNT {4} CONFIG.C_PROBE0_MU_CNT {4}] [get_ips ila_0]
+
 add_files -norecurse \
        {                                         \
                             ../rtl/axi_master_counter.sv       \
