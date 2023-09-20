@@ -358,7 +358,7 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .C_M_AXI_ADDR_WIDTH     (64),
     .C_M_AXI_DATA_WIDTH     (DATA_WIDTH),
     .C_XFER_SIZE_WIDTH      (WORD_BYTE),
-    .C_MAX_BURST_LENGTH     (2),           // This affect ctrl_addr_offset alignment requirement. Set to 16 means 256-bytes alignment
+    .C_MAX_BURST_LENGTH     (16),           // This affect ctrl_addr_offset alignment requirement. Set to 16 means 256-bytes alignment
     .C_INCLUDE_DATA_FIFO    (0)             // disable axi master fifo
   )
         u_ofm_write_master (
