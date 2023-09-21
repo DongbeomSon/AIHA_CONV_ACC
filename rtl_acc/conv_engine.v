@@ -8,14 +8,19 @@
 `timescale 1ns/1ps
 
 module conv_engine #(
+	parameter IFM_TILE_ROW = 18,
+	parameter KERNEL_SIZE = 3,
     parameter WIFM_DATA_WIDTH = 512,
     parameter WWGT_DATA_WIDTH = 512,
+	parameter IFM_DATA_WIDTH = 8*IFM_TILE_ROW,
+    parameter WGT_DATA_WIDTH = 8*KERNEL_SIZE,
 
     parameter IFM_BUFF_WORD_NUM = 64,
     parameter IFM_BUFF_ADDR_WIDTH  = $clog2(IFM_BUFF_WORD_NUM) + 1,
     parameter WGT_BUFF_WORD_NUM = 64,
     parameter WGT_BUFF_ADDR_WIDTH  = $clog2(WGT_BUFF_WORD_NUM) + 1,
-
+	
+	
 
     parameter OUT_DATA_WIDTH = 32,
     parameter TI = 16
@@ -91,7 +96,7 @@ module conv_engine #(
 
     switch_buffer  #(
         .DATA_WIDTH (WIFM_DATA_WIDTH),
-        .DATA_NUM_BYTE (46080)
+        .DATA_NUM_BYTE (41472)
    //     .DATA_NUM (IFM_BUFF_WORD_NUM),
    //     .FIFO_ADDR_WIDTH (IFM_BUFF_ADDR_WIDTH)
     ) ifm_buffer (
@@ -166,8 +171,8 @@ module conv_engine #(
         end
     end
 
-    wire    [79:0] ifm;
-    ifm_parser #(.INPUT_WIDTH(512), .OUTPUT_WIDTH(80), .REG_NUM(5)) ifm_parser(
+    wire    [IFM_DATA_WIDTH-1:0] ifm;
+    ifm_parser #(.INPUT_WIDTH(512), .OUTPUT_WIDTH(IFM_DATA_WIDTH), .REG_NUM(9)) ifm_parser(
         .clk    (clk),
         .rst_n  (rst_n),
 		.start_conv_pulse (start_conv_pulse),
@@ -181,8 +186,8 @@ module conv_engine #(
     );
 
 
-    wire    [47:0] wgt;
-    wgt_parser #(.INPUT_WIDTH(512), .OUTPUT_WIDTH(48),  .REG_NUM(3)) wgt_parser(
+    wire    [WGT_DATA_WIDTH-1:0] wgt;
+    ifm_parser #(.INPUT_WIDTH(512), .OUTPUT_WIDTH(WGT_DATA_WIDTH),  .REG_NUM(3)) wgt_parser(
         .clk    (clk),
         .rst_n  (rst_n),
 		.start_conv_pulse (start_conv_pulse),
@@ -195,14 +200,15 @@ module conv_engine #(
         .input_req (wrapped_wgt_req)
     );
 
-    wire [255:0] ofm0_port;
-    wire [255:0] ofm1_port;
-	wire         ofm0_port_v;
-	wire         ofm1_port_v;
+    wire [511:0] ofm_port;
+	wire         ofm_port_v;
+
     CONV_ACC #(
         .out_data_width(OUT_DATA_WIDTH),
         .buf_addr_width(5),
-        .buf_depth(TI)
+        .buf_depth(TI),
+		.IFM_DATA_WIDTH(IFM_DATA_WIDTH),
+		.WGT_DATA_WIDTH(WGT_DATA_WIDTH)
     ) conv_acc (
         .clk(clk),
         .rst_n(rst_n),
@@ -211,10 +217,8 @@ module conv_engine #(
         .cfg_co(r_cfg_co),
         .ifm(ifm),
         .weight(wgt),
-        .ofm0_port(ofm0_port),
-        .ofm1_port(ofm1_port),
-        .ofm0_port_v(ofm0_port_v),
-        .ofm1_port_v(ofm1_port_v),
+        .ofm_port(ofm_port),
+        .ofm_port_v(ofm_port_v),
         .ifm_read(ifm_read),
         .wgt_read(wgt_read),
         .end_op(end_conv)
@@ -233,7 +237,7 @@ module conv_engine #(
         end else begin
             ifm_counter <= ifm_read ? ifm_counter + 1 : ifm_counter;
             wgt_counter <= wgt_read ? wgt_counter + 1 : wgt_counter;
-            ofm_counter <= ofm0_port_v & ofm1_port_v ? ofm_counter + 16 : ofm_counter;
+            ofm_counter <= ofm_port_v ? ofm_counter + 16 : ofm_counter;
         end
     end
 
@@ -243,11 +247,9 @@ module conv_engine #(
         .clk(clk),
         .rst_n(rst_n),
 
-        .ofm0_port_v(ofm0_port_v),
-        .ofm1_port_v(ofm1_port_v),
+        .ofm_port_v(ofm_port_v),
 
-        .ofm0_port(ofm0_port),
-        .ofm1_port(ofm1_port),
+        .ofm_port(ofm_port),
 
         .end_conv(end_conv),
 

@@ -1,6 +1,6 @@
 module wgt_parser #(
     parameter INPUT_WIDTH = 512,
-    parameter OUTPUT_WIDTH = 48,
+    parameter OUTPUT_WIDTH = 24,
 	parameter REG_NUM = 3,
 	parameter COMMON_DEN = INPUT_WIDTH * REG_NUM,
     parameter MAX_CNT = COMMON_DEN / OUTPUT_WIDTH
@@ -18,7 +18,7 @@ module wgt_parser #(
     output reg input_req
 );
     reg [2:0] reg_cnt;
-	reg [4:0] fm_cnt;
+	reg [5:0] fm_cnt;
 	
 	reg [COMMON_DEN-1:0]   reg_fm;
     reg [OUTPUT_WIDTH-1:0] r_parse_out;

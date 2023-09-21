@@ -11,44 +11,42 @@ module WRITE_BACK #(
     input  rst_n,
     input  start_init,
     input  p_filter_end,
-    input  [data_width-1:0] ofm0_row0,
-    input  ofm0_row0_valid,
-    input  [data_width-1:0] ofm0_row1,
-    input  ofm0_row1_valid,
-    input  [data_width-1:0] ofm0_row2,
-    input  ofm0_row2_valid,
-    input  [data_width-1:0] ofm0_row3,
-    input  ofm0_row3_valid,
-    input  [data_width-1:0] ofm0_row4,
-    input  ofm0_row4_valid,
-	input  [data_width-1:0] ofm0_row5,
-    input  ofm0_row5_valid,
-	input  [data_width-1:0] ofm0_row6,
-    input  ofm0_row6_valid,
-	input  [data_width-1:0] ofm0_row7,
-    input  ofm0_row7_valid,
-    input  [data_width-1:0] ofm1_row0,
-    input  ofm1_row0_valid,
-    input  [data_width-1:0] ofm1_row1,
-    input  ofm1_row1_valid,
-    input  [data_width-1:0] ofm1_row2,
-    input  ofm1_row2_valid,
-    input  [data_width-1:0] ofm1_row3,
-    input  ofm1_row3_valid,
-    input  [data_width-1:0] ofm1_row4,
-    input  ofm1_row4_valid,
-	input  [data_width-1:0] ofm1_row5,
-    input  ofm1_row5_valid,
-	input  [data_width-1:0] ofm1_row6,
-    input  ofm1_row6_valid,
-	input  [data_width-1:0] ofm1_row7,
-    input  ofm1_row7_valid,
+    input  [data_width-1:0] row0,
+    input  row0_valid,
+    input  [data_width-1:0] row1,
+    input  row1_valid,
+    input  [data_width-1:0] row2,
+    input  row2_valid,
+    input  [data_width-1:0] row3,
+    input  row3_valid,
+    input  [data_width-1:0] row4,
+    input  row4_valid,
+	input  [data_width-1:0] row5,
+    input  row5_valid,
+	input  [data_width-1:0] row6,
+    input  row6_valid,
+	input  [data_width-1:0] row7,
+    input  row7_valid,
+    input  [data_width-1:0] row8,
+    input  row8_valid,
+    input  [data_width-1:0] row9,
+    input  row9_valid,
+    input  [data_width-1:0] row10,
+    input  row10_valid,
+    input  [data_width-1:0] row11,
+    input  row11_valid,
+    input  [data_width-1:0] row12,
+    input  row12_valid,
+	input  [data_width-1:0] row13,
+    input  row13_valid,
+	input  [data_width-1:0] row14,
+    input  row14_valid,
+	input  [data_width-1:0] row15,
+    input  row15_valid,
     output p_write_zero,
     output p_init,
-    output [255:0] ofm0_out_port,
-    output ofm0_port_valid,
-    output [255:0] ofm1_out_port,
-    output ofm1_port_valid,
+    output [511:0] out_port,
+    output port_valid,
     output start_conv,
     output odd_cnt,
 
@@ -121,7 +119,7 @@ module WRITE_BACK #(
                 else
                     st_next = ROW;
             FINISH:
-                    st_next = !ofm0_port_valid ? END_CONV : FINISH;
+                    st_next = !port_valid ? END_CONV : FINISH;
             END_CONV:
                     st_next = IDLE;
             // DONE:
@@ -133,7 +131,7 @@ module WRITE_BACK #(
     /// Output logic
     reg p_write_zero_r;
     reg p_init_r;
-    reg [255:0] out_port_r;
+    reg [511:0] out_port_r;
     reg port_valid_r;
     reg start_conv_r;
 
@@ -212,60 +210,46 @@ module WRITE_BACK #(
         else r_end_conv <= r_end_conv ? 1 : end_conv;
     end
 
-	wire ofm0_row_valid = (ofm0_row0_valid & ofm0_row1_valid & ofm0_row2_valid & ofm0_row3_valid 
-						  & ofm0_row4_valid & ofm0_row5_valid & ofm0_row6_valid & ofm0_row7_valid);	
-	wire ofm1_row_valid = (ofm1_row0_valid & ofm1_row1_valid & ofm1_row2_valid & ofm1_row3_valid 
-					      & ofm1_row4_valid & ofm1_row5_valid & ofm1_row6_valid & ofm1_row7_valid);	
+	wire row_valid = (row0_valid & row1_valid & row2_valid & row3_valid 
+						  & row4_valid & row5_valid & row6_valid & row7_valid
+						  & row8_valid & row9_valid & row10_valid & row11_valid 
+						  & row12_valid & row13_valid & row14_valid & row15_valid);	
 		
-	reg [255:0] ofm0_out_port_r;	
-	reg [255:0] ofm1_out_port_r;
-	reg         ofm0_port_valid_r;
-	reg         ofm1_port_valid_r;
+
     /// Final result, a big mux
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            ofm0_out_port_r <= 0;
-			ofm0_port_valid_r <= 0;
-			ofm1_out_port_r <= 0;
-			ofm1_port_valid_r <= 0;
+            out_port_r <= 0;
+			port_valid_r <= 0;
         end else begin
-            if(ofm0_row_valid)
+            if(row_valid)
                 begin
-                    ofm0_out_port_r[31:0] <= ofm0_row0;
-					ofm0_out_port_r[63:32] <= ofm0_row1;
-					ofm0_out_port_r[95:64] <= ofm0_row2;
-					ofm0_out_port_r[127:96] <= ofm0_row3;
-					ofm0_out_port_r[159:128] <= ofm0_row4;
-					ofm0_out_port_r[191:160] <= ofm0_row5;
-					ofm0_out_port_r[223:192] <= ofm0_row6;
-					ofm0_out_port_r[255:224] <= ofm0_row7;
+                    out_port_r[31:0] <= row0;
+					out_port_r[63:32] <= row1;
+					out_port_r[95:64] <= row2;
+					out_port_r[127:96] <= row3;
+					out_port_r[159:128] <= row4;
+					out_port_r[191:160] <= row5;
+					out_port_r[223:192] <= row6;
+					out_port_r[255:224] <= row7;
+                    out_port_r[287:256] <= row8;
+					out_port_r[319:288] <= row9;
+					out_port_r[351:320] <= row10;
+					out_port_r[383:352] <= row11;
+					out_port_r[415:384] <= row12;
+					out_port_r[447:416] <= row13;
+					out_port_r[479:448] <= row14;
+					out_port_r[511:480] <= row15;
 					
-					ofm0_port_valid_r <= ofm0_row_valid;
-				end
-			if(ofm1_row_valid)
-				begin
-					ofm1_out_port_r[31:0] <= ofm1_row0;
-					ofm1_out_port_r[63:32] <= ofm1_row1;
-					ofm1_out_port_r[95:64] <= ofm1_row2;
-					ofm1_out_port_r[127:96] <= ofm1_row3;
-					ofm1_out_port_r[159:128] <= ofm1_row4;
-					ofm1_out_port_r[191:160] <= ofm1_row5;
-					ofm1_out_port_r[223:192] <= ofm1_row6;
-					ofm1_out_port_r[255:224] <= ofm1_row7;
-					
-					ofm1_port_valid_r <= ofm1_row_valid;
+					port_valid_r <= row_valid;
 				end
 			else
 				begin
-					ofm0_out_port_r <= 0;
-					ofm0_port_valid_r <= 0;
-					ofm1_out_port_r <= 0;
-					ofm1_port_valid_r <= 0;
+					out_port_r <= 0;
+					port_valid_r <= 0;
 				end
 		end
     end
-    assign ofm0_out_port = ofm0_out_port_r;
-    assign ofm0_port_valid = ofm0_port_valid_r;
-	assign ofm1_out_port = ofm1_out_port_r;
-    assign ofm1_port_valid = ofm1_port_valid_r;
+    assign out_port = out_port_r;
+    assign port_valid = port_valid_r;
 endmodule

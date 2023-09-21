@@ -5,11 +5,9 @@ module flatter #(
     input clk,
     input rst_n,
 
-    input ofm0_port_v,
-    input ofm1_port_v,
+    input ofm_port_v,
 
-    input [255:0] ofm0_port,
-    input [255:0] ofm1_port,
+    input [511:0] ofm_port,
 
     input end_conv,
 
@@ -55,8 +53,8 @@ module flatter #(
     assign tdata = out_fifo_pop_data;
     assign valid = !out_fifo_empty;
     assign out_fifo_pop_req = ready & valid;
-    assign out_fifo_push_req = ofm0_port_v & ofm1_port_v;
-    assign out_fifo_push_data = {ofm0_port,ofm1_port};
+    assign out_fifo_push_req = ofm_port_v;
+    assign out_fifo_push_data = ofm_port;
 	
     
 	reg r_end_conv;
