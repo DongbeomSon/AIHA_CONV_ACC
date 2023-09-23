@@ -20,9 +20,9 @@ output end_conv;
 reg [5:0] ci;
 reg [5:0] co;
 
-reg [5:0] cnt1;
-reg [8:0] cnt2;
-reg [8:0] cnt3;
+reg [31:0] cnt1;
+reg [31:0] cnt2;
+reg [31:0] cnt3;
 
 
 reg [2:0] current_state;

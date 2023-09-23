@@ -7,7 +7,7 @@
 
 # number of data groups (packet) to be processed
 export CI=0
-export CO=0
+export CO=1
 export TI=16
 export TI_FACTOR=$[64/$TI]
 export CFG_CI=$[$[$CI+1] * 8]

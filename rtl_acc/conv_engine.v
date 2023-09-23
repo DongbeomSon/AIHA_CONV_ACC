@@ -91,7 +91,7 @@ module conv_engine #(
 
     switch_buffer  #(
         .DATA_WIDTH (WIFM_DATA_WIDTH),
-        .DATA_NUM_BYTE (63232)
+        .DATA_NUM_BYTE (63242)
    //     .DATA_NUM (IFM_BUFF_WORD_NUM),
    //     .FIFO_ADDR_WIDTH (IFM_BUFF_ADDR_WIDTH)
     ) ifm_buffer (
@@ -124,7 +124,7 @@ module conv_engine #(
 
     switch_buffer #(
         .DATA_WIDTH (WWGT_DATA_WIDTH),
-        .DATA_NUM_BYTE (53248)
+        .DATA_NUM_BYTE (106496)
     //    .DATA_NUM (WGT_BUFF_WORD_NUM),
     //    .FIFO_ADDR_WIDTH (WGT_BUFF_ADDR_WIDTH) //log_2 DATANUM + 1
         ) wgt_buffer(

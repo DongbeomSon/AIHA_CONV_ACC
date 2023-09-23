@@ -83,7 +83,7 @@ module WRITE_BACK #(
                 else
                     st_next = INIT_BUFF;
             START_CONV:
-                if (cnt >= depth+2)
+                if (cnt >= depth)
                     st_next = CLEAR_START_CONV;
                 else 
                     st_next = START_CONV;

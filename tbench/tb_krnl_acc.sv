@@ -8,7 +8,7 @@
 `timescale 1ns/1ps
 
 `define CI 0
-`define CO 0
+`define CO 1
 `define TI 16
 `define TI_FACTOR 64/`TI
 `define CFG_CI (`CI+1)*8
@@ -26,7 +26,9 @@
 `define OUT_DATA_WIDTH 25
 
 //`define OFM_LEN `OFM_H*`OFM_W*`CFG_CO*4
-`define OFM_LEN 133120
+//`define OFM_LEN 133120
+`define OFM_LEN 266240
+//`define OFM_LEN 169728
 
 `define OFM_LEN_WORD `OFM_LEN/64
 

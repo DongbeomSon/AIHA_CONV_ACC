@@ -2,7 +2,7 @@ module switch_buffer #(
     parameter DATA_WIDTH = 512,
     parameter DATA_NUM = 64,
     parameter DATA_NUM_BYTE = 63232,
-    parameter FIFO_ADDR_WIDTH = 10,
+    parameter FIFO_ADDR_WIDTH = 11,
     parameter BURST_LENGTH = 4,
     parameter INIT_LOOP = DATA_NUM_BYTE/DATA_NUM/BURST_LENGTH
     )(
