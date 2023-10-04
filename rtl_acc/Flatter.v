@@ -4,6 +4,7 @@ module flatter #(
     (
     input clk,
     input rst_n,
+    input stall,
 
     input ofm_port0_v,
     input ofm_port1_v,
@@ -36,12 +37,12 @@ module flatter #(
     wire [511:0] out_fifo_pop_data;
     wire out_fifo_empty;
     wire out_fifo_full;
-    wire [3:0] out_fifo_data_cnt;
+    wire [12:0] out_fifo_data_cnt;
 
     FifoType0 #(.data_width (512), .addr_bits (12)) ofm_fifo (
         .CLK        (clk),
         .nRESET     (rst_n),
-        .PUSH_REQ   (out_fifo_push_req),
+        .PUSH_REQ   (!stall & out_fifo_push_req),
         .POP_REQ    (out_fifo_pop_req),
         .PUSH_DATA  (out_fifo_push_data),
         .CLEAR      (),
@@ -143,25 +144,27 @@ module flatter #(
             wcnt <= 0;
             r_port_v <= 0;
         end else begin
-            if (flat_done == WORD_READY_1) begin
-                ofm_temp0 <= ofm_temp1;
-                flat_done <= PREQ;
-                p_req <= 1;
-            end else if (flat_done == PREQ) begin
-                p_req <= 0;
-                flat_done <= IDLE;
-            end
-            if (cnt == 16) begin
-                    cnt <= 0;
-                    flat_done <= (r_port_v) ? PREQ : WORD_READY_1;
-                    ofm_temp0 <= ofm0;
-                    ofm_temp1 <= ofm1;
+            if(!stall) begin
+                if (flat_done == WORD_READY_1) begin
+                    ofm_temp0 <= ofm_temp1;
+                    flat_done <= PREQ;
                     p_req <= 1;
-                end else begin
-                    if (ofm_port0_v) ofm0[cnt * 32 +: 32] <= {7'b000_0000,ofm_port0};
-                    if (ofm_port1_v) ofm1[cnt * 32 +: 32] <= {7'b000_0000, ofm_port1};
-                    cnt <= (ofm_port0_v | ofm_port1_v) ? cnt + 1 : cnt;
-                    r_port_v <= ofm_port0_v ^ ofm_port1_v;
+                end else if (flat_done == PREQ) begin
+                    p_req <= 0;
+                    flat_done <= IDLE;
+                end
+                if (cnt == 16) begin
+                        cnt <= 0;
+                        flat_done <= (r_port_v) ? PREQ : WORD_READY_1;
+                        ofm_temp0 <= ofm0;
+                        ofm_temp1 <= ofm1;
+                        p_req <= 1;
+                    end else begin
+                        if (ofm_port0_v) ofm0[cnt * 32 +: 32] <= {7'b000_0000,ofm_port0};
+                        if (ofm_port1_v) ofm1[cnt * 32 +: 32] <= {7'b000_0000, ofm_port1};
+                        cnt <= (ofm_port0_v | ofm_port1_v) ? cnt + 1 : cnt;
+                        r_port_v <= ofm_port0_v ^ ofm_port1_v;
+                end
             end
         end
     end

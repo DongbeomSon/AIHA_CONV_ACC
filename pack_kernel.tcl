@@ -18,7 +18,7 @@ add_files -norecurse \
                             ../rtl/TPSR.v \
                             ../rtl/FifoCtlType0.v \
                             ../rtl/FifoType0.v \
-
+                             
                             ../rtl_acc/PSUM_ADD.v \
                             ../rtl_acc/PSUM_BUFF.v       \
                             ../rtl_acc/SYNCH_FIFO.v      \
@@ -30,12 +30,23 @@ add_files -norecurse \
                             ../rtl_acc/CONV_ACC.v  \
                             ../rtl_acc/acc_eng_ctrl.v \
                             ../rtl_acc/Flatter.v \
+                            ../rtl_acc/input_buffer.v \
                             ../rtl_acc/krnl_acc_axi_ctrl_slave.v \
                             ../rtl_acc/krnl_acc.v \
                             ../rtl_acc/parser.v \
                             ../rtl_acc/switch_buffer.v \
                             ../rtl_acc/conv_engine.v \
        }
+
+create_ip -name ila -vendor xilinx.com -library ip -version 6.2 -module_name ila_0
+set_property -dict [list CONFIG.C_PROBE5_WIDTH {64} CONFIG.C_PROBE4_WIDTH {64} CONFIG.C_PROBE3_WIDTH {64} \
+CONFIG.C_NUM_OF_PROBES {6} CONFIG.C_EN_STRG_QUAL {1} CONFIG.C_INPUT_PIPE_STAGES {2} \
+CONFIG.C_ADV_TRIGGER {true} CONFIG.ALL_PROBE_SAME_MU_CNT {4}] [get_ips ila_0]
+
+# create_ip -name ila -vendor xilinx.com -library ip -version 6.2 -module_name ila_1
+# set_property -dict [list CONFIG.C_PROBE3_WIDTH {32} CONFIG.C_PROBE2_WIDTH {32} \
+# CONFIG.C_NUM_OF_PROBES {4} CONFIG.C_EN_STRG_QUAL {1} CONFIG.C_INPUT_PIPE_STAGES {2} \
+# CONFIG.C_ADV_TRIGGER {true} CONFIG.ALL_PROBE_SAME_MU_CNT {4}] [get_ips ila_1]
 
 update_compile_order -fileset sources_1
 

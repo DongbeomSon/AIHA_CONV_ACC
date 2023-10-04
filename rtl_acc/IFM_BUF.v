@@ -1,8 +1,9 @@
 `timescale 1ns/1ps
 
-module IFM_BUF (clk, rst_n, ifm_input, ifm_read, ifm_buf0, ifm_buf1, ifm_buf2, ifm_buf3);
+module IFM_BUF (clk, stall, rst_n, ifm_input, ifm_read, ifm_buf0, ifm_buf1, ifm_buf2, ifm_buf3);
 
 input clk;
+input stall;
 input rst_n;
 input signed [7:0] ifm_input;
 input ifm_read;
@@ -25,19 +26,21 @@ always @(posedge clk or negedge rst_n)
     end
     else
     begin
-        if(ifm_read)
-        begin
-            ifm_buf[3] <= ifm_buf[2];
-            ifm_buf[2] <= ifm_buf[1];
-            ifm_buf[1] <= ifm_buf[0];
-            ifm_buf[0] <= ifm_input;
-        end
-        else 
-        begin
-            ifm_buf[3] <= ifm_buf[3];
-            ifm_buf[2] <= ifm_buf[2];
-            ifm_buf[1] <= ifm_buf[1];
-            ifm_buf[0] <= ifm_buf[0];
+        if(!stall) begin
+            if(ifm_read)
+            begin
+                ifm_buf[3] <= ifm_buf[2];
+                ifm_buf[2] <= ifm_buf[1];
+                ifm_buf[1] <= ifm_buf[0];
+                ifm_buf[0] <= ifm_input;
+            end
+            else 
+            begin
+                ifm_buf[3] <= ifm_buf[3];
+                ifm_buf[2] <= ifm_buf[2];
+                ifm_buf[1] <= ifm_buf[1];
+                ifm_buf[0] <= ifm_buf[0];
+            end
         end
     end
 

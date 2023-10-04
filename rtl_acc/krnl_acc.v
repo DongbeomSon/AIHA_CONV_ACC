@@ -264,11 +264,15 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
  
 
 //    assign ifm_addr_offset = ifm_addr_base;
-    assign ifm_xfer_size_in_bytes = IFM_BUFF_WORD_NUM * 64;
+//    assign ifm_xfer_size_in_bytes = IFM_BUFF_WORD_NUM * 64;
+    wire [63:0] ifm_xfer_size;
+    assign ifm_xfer_size_in_bytes = ifm_xfer_size;
 
 //    assign wgt_addr_offset = wgt_addr_base;
  //   assign wgt_xfer_size_in_bytes = 4 * 4 * cfg_ci * cfg_co;
-    assign wgt_xfer_size_in_bytes = WGT_BUFF_WORD_NUM * 64;
+//    assign wgt_xfer_size_in_bytes = WGT_BUFF_WORD_NUM * 64;
+    wire [63:0] wgt_xfer_size;
+    assign wgt_xfer_size_in_bytes = wgt_xfer_size;
 
     wire    [63:0]  wmst_xfer_addr;
     wire    [63:0]  wmst_xfer_size;
@@ -278,7 +282,7 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .C_M_AXI_ADDR_WIDTH     (64),
     .C_M_AXI_DATA_WIDTH     (DATA_WIDTH),
     .C_XFER_SIZE_WIDTH      (WORD_BYTE),
-    .C_MAX_BURST_LENGTH     (4),           // This affect ctrl_addr_offset alignment requirement. Set to 16 means 256-bytes alignment
+    .C_MAX_BURST_LENGTH     (64),           // This affect ctrl_addr_offset alignment requirement. Set to 16 means 256-bytes alignment
     .C_INCLUDE_DATA_FIFO    (0)             // disable axi master fifo
   )
         u_ifm_read_master (
@@ -310,7 +314,7 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .C_M_AXI_ADDR_WIDTH     (64),
     .C_M_AXI_DATA_WIDTH     (DATA_WIDTH),
     .C_XFER_SIZE_WIDTH      (WORD_BYTE),
-    .C_MAX_BURST_LENGTH     (4),           // This affect ctrl_addr_offset alignment requirement. Set to 16 means 256-bytes alignment
+    .C_MAX_BURST_LENGTH     (64),           // This affect ctrl_addr_offset alignment requirement. Set to 16 means 256-bytes alignment
     .C_INCLUDE_DATA_FIFO    (0)             // disable axi master fifo
   )
         u_wgt_read_master (
@@ -457,40 +461,77 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .ifm_addr_base(ifm_addr_base),
     .ifm_done (ifm_done),
     .ifm_offset(ifm_addr_offset),
+    .ifm_xfer_size(ifm_xfer_size),
 
     .wgt_req (wgt_start),
     .wgt_addr_base(wgt_addr_base),
     .wgt_done (wgt_done),
     .wgt_offset(wgt_addr_offset),
+    .wgt_xfer_size(wgt_xfer_size),
 
     .end_conv (end_conv),
     .write_buffer_wait(write_buffer_wait)
 );
 
-	// // ILA monitoring combinatorial adder
-	// ila_0 i_ila_0 (
-	// 	.clk(ap_clk),              // input wire        clk
-	// 	.probe0(op_start),           // input wire [0:0]  probe0  
-	// 	.probe1(end_conv), // input wire [0:0]  probe1 
-	// 	.probe2(cfg_ci),   // input wire [31:0]  probe2 
-	// 	.probe3(cfg_co),    // input wire [31:0] probe3 
-	// 	.probe4(ifm_axis_tvalid),     // input wire [0:0]  probe4 
-	// 	.probe5(ifm_axis_tdata),   // input wire [511:0]  probe5 
-	// 	.probe6(ifm_axis_tready),       // input wire [0:0] probe6
-  // 		.probe7(wgt_axis_tvalid),     // input wire [0:0]  probe7 
-	// 	.probe8(wgt_axis_tdata),   // input wire [511:0]  probe8 
-	// 	.probe9(wgt_axis_tready),       // input wire [0:0] probe9
-  // 		.probe10(ofm_axis_tvalid),     // input wire [0:0]  probe10 
-	// 	.probe11(ofm_axis_tdata),   // input wire [511:0]  probe11 
-	// 	.probe12(ofm_axis_tready)       // input wire [0:0] probe12
-	// );
+
+//cycle counter
 
   reg [31:0] cycle_counter;
+  reg [31:0] read_cycle;
+  reg [31:0] wgt_cycle;
+  reg [31:0] write_cycle;
+  reg [31:0] engine_counter;
+  reg r_read;
+  reg r_wgt;
+  reg r_write;
+  reg r_engine;
+
+  always @(negedge ap_rst_n, posedge ap_clk) begin
+      if(!ap_rst_n) begin
+          r_read <= 0;
+          r_wgt <= 0;
+          r_write <= 0;
+          r_engine <= 0;
+      end else begin
+          r_read <= ifm_start ? 1 :
+                    ifm_done ? 0 : r_read;
+          r_write <= ofm_start ? 1 :
+                    ofm_done ? 0 : r_write;
+          r_wgt <= wgt_start ? 1 :
+                    wgt_done ? 0 : r_wgt;
+          r_engine <= op_start ? 1 :
+                    end_conv ? 0 : r_engine;
+
+      end
+  end
+
   always @(negedge ap_rst_n, posedge ap_clk) begin
       if(!ap_rst_n) begin
           cycle_counter <= 0;
+          read_cycle <= 0;
+          wgt_cycle <= 0;
+          write_cycle <= 0;
+          engine_counter <= 0;
       end else begin
           if(!ap_ready) cycle_counter <= cycle_counter +1;
+          if(r_read) read_cycle <= read_cycle + 1;
+          if(r_wgt) wgt_cycle <= wgt_cycle + 1;
+          if(r_write) write_cycle <= write_cycle + 1;
+          if(r_engine) engine_counter <= engine_counter + 1;
       end
   end
+
+	// // ILA monitoring combinatorial adder
+	// ila_0 i_ila_0 (
+	// 	.clk(ap_clk),              // input wire        clk
+	// 	.probe0(r_read),           // input wire [0:0]  probe0  
+	// 	.probe1(r_wgt), // input wire [0:0]  probe1 
+	// 	.probe2(r_write),   // input wire [0:0]  probe2 
+	// 	.probe3(r_engine),    // input wire [0:0] probe3 
+	// 	.probe4(read_cycle),     // input wire [31:0]  probe4 
+	// 	.probe5(wgt_cycle),   // input wire [31:0]  probe5 
+	// 	.probe6(write_cycle),       // input wire [31:0] probe6
+  // 	.probe7(engine_counter),     // input wire [31:0]  probe7 
+	// 	.probe8(cycle_counter)   // input wire [31:0]  probe8 
+	// );
 endmodule

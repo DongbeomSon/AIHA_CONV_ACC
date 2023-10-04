@@ -52,6 +52,7 @@ module switch_buffer #(
         .DATA_CNT   (in_fifo0_data_cnt)
     );
     reg r_pop_req;
+    // assign in_fifo0_push_req = buf_rdy ? pop_req : valid & ready;
     assign in_fifo0_push_req = buf_rdy ? pop_req : valid & ready;
 
    

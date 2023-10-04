@@ -28,6 +28,8 @@ module conv_engine #(
     input   [63:0]  write_addr,             // axi master write address
     input  [31:0] cfg_ci,
     input  [31:0] cfg_co,
+    // input  [31:0] ifm_size,
+    // input  [31:0] wgt_size,
 
 // AXI stream slave port, receive data from AXI read master for IFM
     input           axis_slv_ifm_tvalid,
@@ -59,11 +61,13 @@ module conv_engine #(
     input [63:0] ifm_addr_base,
     input ifm_done,
     output [63:0]  ifm_offset,  //reg?
+    output [63:0]  ifm_xfer_size,
 
     output wgt_req,
     input [63:0] wgt_addr_base,
     input wgt_done,
     output [63:0]  wgt_offset, //reg?
+    output [63:0]  wgt_xfer_size,
 
 // end_conv , clear singnal
     output end_conv,
@@ -73,8 +77,10 @@ module conv_engine #(
 
 
 // control signal registing
-    reg     [1:0]   r_cfg_ci;
-    reg     [1:0]   r_cfg_co; 
+    reg     [31:0]   r_cfg_ci;
+    reg     [31:0]   r_cfg_co;
+    // reg     [63:0]   r_ifm_size;
+    // reg     [63:0]   r_wgt_size;
 
 
     // assign axis_slv_rmst_tready = !in_fifo_full;
@@ -89,9 +95,21 @@ module conv_engine #(
     wire ifm_read;
     wire wgt_read;
 
-    switch_buffer  #(
+
+// stall signal 
+    wire ifm_stall;
+    wire wgt_stall;
+
+
+    wire g_stall = ifm_stall | wgt_stall;
+
+    wire ifm_xfer_clear;
+    wire wgt_xfer_clear;
+
+    input_buffer  #(
         .DATA_WIDTH (WIFM_DATA_WIDTH),
-        .DATA_NUM_BYTE (63232)
+        .TEST_BYTE(1011712)
+   //     .DATA_NUM_BYTE (63232)
    //     .DATA_NUM (IFM_BUFF_WORD_NUM),
    //     .FIFO_ADDR_WIDTH (IFM_BUFF_ADDR_WIDTH)
     ) ifm_buffer (
@@ -107,6 +125,10 @@ module conv_engine #(
         .rmst_req   (ifm_req),
         .rmst_done  (ifm_done),
 
+        .xfer_size (ifm_xfer_size),
+
+        // .data_byte (ifm_size),
+
         .addr_offset (ifm_offset),
 
         .pop_req   (wrapped_ifm_req),
@@ -115,16 +137,21 @@ module conv_engine #(
         .op_start   (op_start),
         .end_conv   (end_conv),
 
-        .buf_rdy    (ifm_buf_rdy)
+        .g_stall(g_stall),
+
+        .xfer_clear(ifm_xfer_clear),
+
+        .stall    (ifm_stall)
     );
 
     wire   wrapped_wgt_req;
     wire  [WWGT_DATA_WIDTH-1:0] wrapped_wgt;
     wire wgt_buf_rdy;
 
-    switch_buffer #(
+    input_buffer #(
         .DATA_WIDTH (WWGT_DATA_WIDTH),
-        .DATA_NUM_BYTE (53248)
+        .TEST_BYTE(851968)
+    //    .DATA_NUM_BYTE (53248)
     //    .DATA_NUM (WGT_BUFF_WORD_NUM),
     //    .FIFO_ADDR_WIDTH (WGT_BUFF_ADDR_WIDTH) //log_2 DATANUM + 1
         ) wgt_buffer(
@@ -137,8 +164,12 @@ module conv_engine #(
 
         .addr_base (wgt_addr_base),    
 
+        // .data_byte (wgt_size),
+
         .rmst_req   (wgt_req),
         .rmst_done  (wgt_done),
+
+        .xfer_size (wgt_xfer_size),
 
         .pop_req   (wrapped_wgt_req),
         .o_data     (wrapped_wgt), 
@@ -148,7 +179,10 @@ module conv_engine #(
         .op_start   (op_start),
         .end_conv   (end_conv),
 
-        .buf_rdy    (wgt_buf_rdy)
+        .g_stall(g_stall),
+        .xfer_clear(wgt_xfer_clear),
+
+        .stall    (wgt_stall)
     );
 
     wire start_conv = ifm_buf_rdy & wgt_buf_rdy;
@@ -176,7 +210,9 @@ module conv_engine #(
  //       .init_word  (start_conv_pulse),
 
         .parse_out (ifm),
-        .input_req (wrapped_ifm_req)
+        .input_req (wrapped_ifm_req),
+
+        .stall(g_stall)
     );
 
 
@@ -190,11 +226,26 @@ module conv_engine #(
  //       .init_word  (start_conv_pulse),
 
         .parse_out (wgt),
-        .input_req (wrapped_wgt_req)
+        .input_req (wrapped_wgt_req),
+
+        .stall(g_stall)
     );
 
     wire [24:0] ofm_port0;
     wire [24:0] ofm_port1;
+
+    reg r_op_start;
+    always @(posedge clk, negedge rst_n) begin
+        if(!rst_n) begin
+            r_op_start <= 0;
+        end else begin
+            if(g_stall) begin
+                r_op_start <= op_start ? 1 : r_op_start;
+            end else if(r_op_start) begin
+                r_op_start <= 0;
+            end
+        end
+    end
 
     CONV_ACC #(
         .out_data_width(OUT_DATA_WIDTH),
@@ -203,7 +254,8 @@ module conv_engine #(
     ) conv_acc (
         .clk(clk),
         .rst_n(rst_n),
-        .start_conv(start_conv_pulse),
+        // .start_conv(start_conv_pulse),
+        .start_conv(r_op_start),
         .cfg_ci(r_cfg_ci),
         .cfg_co(r_cfg_co),
         .ifm(ifm),
@@ -214,8 +266,12 @@ module conv_engine #(
         .ofm_port1_v(ofm_port1_v),
         .ifm_read(ifm_read),
         .wgt_read(wgt_read),
-        .end_op(end_conv)
+        .end_op(end_conv),
+
+        .stall(g_stall)
     );
+
+
 
     //counter
 
@@ -236,10 +292,13 @@ module conv_engine #(
     end
 
     wire [63:0] wmst_addr;
+    wire write_xfer_wait;
+    assign write_buffer_wait = !write_xfer_wait & ifm_xfer_clear & wgt_xfer_clear;
 
     flatter ofm_flat(
         .clk(clk),
         .rst_n(rst_n),
+        .stall(g_stall),
 
         .ofm_port0_v(ofm_port0_v),
         .ofm_port1_v(ofm_port1_v),
@@ -258,7 +317,7 @@ module conv_engine #(
         .wmst_req(ofm_req),
         .wmst_addr(ofm_offset),
         .wmst_xfer_size(ofm_xfer_size),
-        .write_buffer_wait(write_buffer_wait)
+        .write_buffer_wait(write_xfer_wait)
     );
 
     assign ofm_xfer_addr = wmst_addr;
@@ -271,11 +330,54 @@ module conv_engine #(
 //            ofm_xfer_addr <= 0;
         end else begin
             if (op_start) begin
-            r_cfg_ci <= cfg_ci[1:0];
-            r_cfg_co <= cfg_co[1:0];
+            r_cfg_ci <= cfg_ci;
+            r_cfg_co <= cfg_co;
+            // r_ifm_size <= ifm_size;
+            // r_wgt_size <= wgt_size;
 //            ofm_xfer_addr <= wmst_addr;
             end
         end
     end
+
+
+reg [31:0] buf_rdy_cnt;
+reg r_buf_rdy;
+reg [31:0] eng_cnt;
+reg r_eng_run;
+
+always @(posedge clk, negedge rst_n) begin
+    if(!rst_n) begin
+        r_buf_rdy <= 0;
+        r_eng_run <= 0;
+    end else begin
+        r_buf_rdy <= op_start ? 1:
+                    r_buf_rdy ? 0 : r_buf_rdy;
+        r_eng_run <= start_conv_pulse ? 1:
+                    end_conv ? 0 : r_eng_run;
+    end
+end
+
+always @(posedge clk, negedge rst_n) begin
+    if(!rst_n) begin
+        buf_rdy_cnt <= 0;
+        eng_cnt <= 0;
+    end else begin
+        if(r_buf_rdy) buf_rdy_cnt <= buf_rdy_cnt + 1;
+        if(r_eng_run) eng_cnt <= eng_cnt + 1;
+    end
+end
+
+
+
+
+	// // ILA monitoring combinatorial adder
+	// ila_0 i_ila_0 (
+	// 	.clk(clk),              // input wire        clk
+	// 	.probe0(fifo_clear),           // input wire [0:0]  probe0  
+	// 	.probe1(xfer_clear), // input wire [0:0]  probe1 
+	// 	.probe2(in_fifo0_empty),   // input wire [0:0]  probe2 
+	// 	.probe3(addr_base),    // input wire [63:0] probe3 
+    //     .probe4(addr_cnt)      // input wire [31:0] probe4
+	// );
 
 endmodule

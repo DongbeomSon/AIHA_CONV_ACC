@@ -12,8 +12,8 @@ module CONV_ACC #(
     input  clk,
     input  rst_n,
     input  start_conv,
-    input  [1:0] cfg_ci,
-    input  [1:0] cfg_co,
+    input  [31:0] cfg_ci,
+    input  [31:0] cfg_co,
     input  [63:0] ifm,
     input  [31:0] weight,
     output [24:0] ofm_port0,
@@ -22,7 +22,9 @@ module CONV_ACC #(
     output ofm_port1_v,
     output ifm_read,
     output wgt_read,
-    output end_op
+    output end_op,
+
+    input stall
 );
 
 
@@ -65,9 +67,9 @@ module CONV_ACC #(
     wire [out_data_width-1:0] pe04_data, pe14_data, pe24_data, pe34_data;
     wire p_filter_end, p_valid_data, start_again;
     /// PE FSM
-    PE_FSM pe_fsm ( .clk(clk), .rst_n(rst_n), .start_conv(start_conv), .start_again(start_again), .cfg_ci(cfg_ci), .cfg_co(cfg_co), 
+    PE_FSM pe_fsm ( .clk(clk), .stall(stall), .rst_n(rst_n), .start_conv(start_conv), .start_again(start_again), .cfg_ci(cfg_ci), .cfg_co(cfg_co), 
             .ifm_read(ifm_read_en), .wgt_read(wgt_read_en), .p_valid_output(p_valid_data), 
-            .last_chanel_output(p_filter_end), .end_conv(end_conv) );  
+            .last_chanel_output(p_filter_end), .end_conv(end_conv));  
     
     /// PE Array
     /// wgt0 row0 pe00 pe01 pe02 pe03 pe04
@@ -93,77 +95,77 @@ module CONV_ACC #(
 
 
 
-	IFM_BUF ifm_buf0( .clk(clk), .rst_n(rst_n), .ifm_input(rows[0]), .ifm_read(ifm_read_en), 
+	IFM_BUF ifm_buf0( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input(rows[0]), .ifm_read(ifm_read_en), 
 	.ifm_buf0(ifm_buf00), .ifm_buf1(ifm_buf01), .ifm_buf2(ifm_buf02), .ifm_buf3(ifm_buf03));
-	IFM_BUF ifm_buf1( .clk(clk), .rst_n(rst_n), .ifm_input(rows[1]), .ifm_read(ifm_read_en), 
+	IFM_BUF ifm_buf1( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input(rows[1]), .ifm_read(ifm_read_en), 
 	.ifm_buf0(ifm_buf10), .ifm_buf1(ifm_buf11), .ifm_buf2(ifm_buf12), .ifm_buf3(ifm_buf13));
-	IFM_BUF ifm_buf2( .clk(clk), .rst_n(rst_n), .ifm_input(rows[2]), .ifm_read(ifm_read_en), 
+	IFM_BUF ifm_buf2( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input(rows[2]), .ifm_read(ifm_read_en), 
 	.ifm_buf0(ifm_buf20), .ifm_buf1(ifm_buf21), .ifm_buf2(ifm_buf22), .ifm_buf3(ifm_buf23));
-	IFM_BUF ifm_buf3( .clk(clk), .rst_n(rst_n), .ifm_input(rows[3]), .ifm_read(ifm_read_en), 
+	IFM_BUF ifm_buf3( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input(rows[3]), .ifm_read(ifm_read_en), 
 	.ifm_buf0(ifm_buf30), .ifm_buf1(ifm_buf31), .ifm_buf2(ifm_buf32), .ifm_buf3(ifm_buf33));
-	IFM_BUF ifm_buf4( .clk(clk), .rst_n(rst_n), .ifm_input(rows[4]), .ifm_read(ifm_read_en), 
+	IFM_BUF ifm_buf4( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input(rows[4]), .ifm_read(ifm_read_en), 
 	.ifm_buf0(ifm_buf40), .ifm_buf1(ifm_buf41), .ifm_buf2(ifm_buf42), .ifm_buf3(ifm_buf43));
-	IFM_BUF ifm_buf5( .clk(clk), .rst_n(rst_n), .ifm_input(rows[5]), .ifm_read(ifm_read_en), 
+	IFM_BUF ifm_buf5( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input(rows[5]), .ifm_read(ifm_read_en), 
 	.ifm_buf0(ifm_buf50), .ifm_buf1(ifm_buf51), .ifm_buf2(ifm_buf52), .ifm_buf3(ifm_buf53));
-	IFM_BUF ifm_buf6( .clk(clk), .rst_n(rst_n), .ifm_input(rows[6]), .ifm_read(ifm_read_en), 
+	IFM_BUF ifm_buf6( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input(rows[6]), .ifm_read(ifm_read_en), 
 	.ifm_buf0(ifm_buf60), .ifm_buf1(ifm_buf61), .ifm_buf2(ifm_buf62), .ifm_buf3(ifm_buf63));
-	IFM_BUF ifm_buf7( .clk(clk), .rst_n(rst_n), .ifm_input(rows[7]), .ifm_read(ifm_read_en), 
+	IFM_BUF ifm_buf7( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input(rows[7]), .ifm_read(ifm_read_en), 
 	.ifm_buf0(ifm_buf70), .ifm_buf1(ifm_buf71), .ifm_buf2(ifm_buf72), .ifm_buf3(ifm_buf73));
 
-	WGT_BUF wgt_buf0( .clk(clk), .rst_n(rst_n), .wgt_input(wgts[0]), .wgt_read(wgt_read_en), 
+	WGT_BUF wgt_buf0( .clk(clk), .stall(stall), .rst_n(rst_n), .wgt_input(wgts[0]), .wgt_read(wgt_read_en), 
 	.wgt_buf0(wgt_buf00), .wgt_buf1(wgt_buf01), .wgt_buf2(wgt_buf02), .wgt_buf3(wgt_buf03));
-	WGT_BUF wgt_buf1( .clk(clk), .rst_n(rst_n), .wgt_input(wgts[1]), .wgt_read(wgt_read_en), 
+	WGT_BUF wgt_buf1( .clk(clk), .stall(stall), .rst_n(rst_n), .wgt_input(wgts[1]), .wgt_read(wgt_read_en), 
 	.wgt_buf0(wgt_buf10), .wgt_buf1(wgt_buf11), .wgt_buf2(wgt_buf12), .wgt_buf3(wgt_buf13));
-	WGT_BUF wgt_buf2( .clk(clk), .rst_n(rst_n), .wgt_input(wgts[2]), .wgt_read(wgt_read_en), 
+	WGT_BUF wgt_buf2( .clk(clk), .stall(stall), .rst_n(rst_n), .wgt_input(wgts[2]), .wgt_read(wgt_read_en), 
 	.wgt_buf0(wgt_buf20), .wgt_buf1(wgt_buf21), .wgt_buf2(wgt_buf22), .wgt_buf3(wgt_buf23));
-	WGT_BUF wgt_buf3( .clk(clk), .rst_n(rst_n), .wgt_input(wgts[3]), .wgt_read(wgt_read_en), 
+	WGT_BUF wgt_buf3( .clk(clk), .stall(stall), .rst_n(rst_n), .wgt_input(wgts[3]), .wgt_read(wgt_read_en), 
 	.wgt_buf0(wgt_buf30), .wgt_buf1(wgt_buf31), .wgt_buf2(wgt_buf32), .wgt_buf3(wgt_buf33));
     
-	PE pe00( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf00), .ifm_input1(ifm_buf01), .ifm_input2(ifm_buf02), .ifm_input3(ifm_buf03), 
+	PE pe00( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf00), .ifm_input1(ifm_buf01), .ifm_input2(ifm_buf02), .ifm_input3(ifm_buf03), 
 	.wgt_input0(wgt_buf00), .wgt_input1(wgt_buf01), .wgt_input2(wgt_buf02), .wgt_input3(wgt_buf03), .p_sum(pe00_data) );
-	PE pe01( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf10), .ifm_input1(ifm_buf11), .ifm_input2(ifm_buf12), .ifm_input3(ifm_buf13), 
+	PE pe01( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf10), .ifm_input1(ifm_buf11), .ifm_input2(ifm_buf12), .ifm_input3(ifm_buf13), 
 	.wgt_input0(wgt_buf00), .wgt_input1(wgt_buf01), .wgt_input2(wgt_buf02), .wgt_input3(wgt_buf03), .p_sum(pe01_data) );
-	PE pe02( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf20), .ifm_input1(ifm_buf21), .ifm_input2(ifm_buf22), .ifm_input3(ifm_buf23), 
+	PE pe02( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf20), .ifm_input1(ifm_buf21), .ifm_input2(ifm_buf22), .ifm_input3(ifm_buf23), 
 	.wgt_input0(wgt_buf00), .wgt_input1(wgt_buf01), .wgt_input2(wgt_buf02), .wgt_input3(wgt_buf03), .p_sum(pe02_data) );
-	PE pe03( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf30), .ifm_input1(ifm_buf31), .ifm_input2(ifm_buf32), .ifm_input3(ifm_buf33), 
+	PE pe03( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf30), .ifm_input1(ifm_buf31), .ifm_input2(ifm_buf32), .ifm_input3(ifm_buf33), 
 	.wgt_input0(wgt_buf00), .wgt_input1(wgt_buf01), .wgt_input2(wgt_buf02), .wgt_input3(wgt_buf03), .p_sum(pe03_data) );
-	PE pe04( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf40), .ifm_input1(ifm_buf41), .ifm_input2(ifm_buf42), .ifm_input3(ifm_buf43), 
+	PE pe04( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf40), .ifm_input1(ifm_buf41), .ifm_input2(ifm_buf42), .ifm_input3(ifm_buf43), 
 	.wgt_input0(wgt_buf00), .wgt_input1(wgt_buf01), .wgt_input2(wgt_buf02), .wgt_input3(wgt_buf03), .p_sum(pe04_data) );
 
 
-	PE pe10( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf10), .ifm_input1(ifm_buf11), .ifm_input2(ifm_buf12), .ifm_input3(ifm_buf13), 
+	PE pe10( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf10), .ifm_input1(ifm_buf11), .ifm_input2(ifm_buf12), .ifm_input3(ifm_buf13), 
 	.wgt_input0(wgt_buf10), .wgt_input1(wgt_buf11), .wgt_input2(wgt_buf12), .wgt_input3(wgt_buf13), .p_sum(pe10_data) );
-	PE pe11( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf20), .ifm_input1(ifm_buf21), .ifm_input2(ifm_buf22), .ifm_input3(ifm_buf23), 
+	PE pe11( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf20), .ifm_input1(ifm_buf21), .ifm_input2(ifm_buf22), .ifm_input3(ifm_buf23), 
 	.wgt_input0(wgt_buf10), .wgt_input1(wgt_buf11), .wgt_input2(wgt_buf12), .wgt_input3(wgt_buf13), .p_sum(pe11_data) );
-	PE pe12( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf30), .ifm_input1(ifm_buf31), .ifm_input2(ifm_buf32), .ifm_input3(ifm_buf33), 
+	PE pe12( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf30), .ifm_input1(ifm_buf31), .ifm_input2(ifm_buf32), .ifm_input3(ifm_buf33), 
 	.wgt_input0(wgt_buf10), .wgt_input1(wgt_buf11), .wgt_input2(wgt_buf12), .wgt_input3(wgt_buf13), .p_sum(pe12_data) );
-	PE pe13( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf40), .ifm_input1(ifm_buf41), .ifm_input2(ifm_buf42), .ifm_input3(ifm_buf43), 
+	PE pe13( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf40), .ifm_input1(ifm_buf41), .ifm_input2(ifm_buf42), .ifm_input3(ifm_buf43), 
 	.wgt_input0(wgt_buf10), .wgt_input1(wgt_buf11), .wgt_input2(wgt_buf12), .wgt_input3(wgt_buf13), .p_sum(pe13_data) );
-	PE pe14( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf50), .ifm_input1(ifm_buf51), .ifm_input2(ifm_buf52), .ifm_input3(ifm_buf53), 
+	PE pe14( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf50), .ifm_input1(ifm_buf51), .ifm_input2(ifm_buf52), .ifm_input3(ifm_buf53), 
 	.wgt_input0(wgt_buf10), .wgt_input1(wgt_buf11), .wgt_input2(wgt_buf12), .wgt_input3(wgt_buf13), .p_sum(pe14_data) );
 
 
-	PE pe20( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf20), .ifm_input1(ifm_buf21), .ifm_input2(ifm_buf22), .ifm_input3(ifm_buf23), 
+	PE pe20( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf20), .ifm_input1(ifm_buf21), .ifm_input2(ifm_buf22), .ifm_input3(ifm_buf23), 
 	.wgt_input0(wgt_buf20), .wgt_input1(wgt_buf21), .wgt_input2(wgt_buf22), .wgt_input3(wgt_buf23), .p_sum(pe20_data) );
-	PE pe21( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf30), .ifm_input1(ifm_buf31), .ifm_input2(ifm_buf32), .ifm_input3(ifm_buf33), 
+	PE pe21( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf30), .ifm_input1(ifm_buf31), .ifm_input2(ifm_buf32), .ifm_input3(ifm_buf33), 
 	.wgt_input0(wgt_buf20), .wgt_input1(wgt_buf21), .wgt_input2(wgt_buf22), .wgt_input3(wgt_buf23), .p_sum(pe21_data) );
-	PE pe22( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf40), .ifm_input1(ifm_buf41), .ifm_input2(ifm_buf42), .ifm_input3(ifm_buf43), 
+	PE pe22( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf40), .ifm_input1(ifm_buf41), .ifm_input2(ifm_buf42), .ifm_input3(ifm_buf43), 
 	.wgt_input0(wgt_buf20), .wgt_input1(wgt_buf21), .wgt_input2(wgt_buf22), .wgt_input3(wgt_buf23), .p_sum(pe22_data) );
-	PE pe23( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf50), .ifm_input1(ifm_buf51), .ifm_input2(ifm_buf52), .ifm_input3(ifm_buf53), 
+	PE pe23( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf50), .ifm_input1(ifm_buf51), .ifm_input2(ifm_buf52), .ifm_input3(ifm_buf53), 
 	.wgt_input0(wgt_buf20), .wgt_input1(wgt_buf21), .wgt_input2(wgt_buf22), .wgt_input3(wgt_buf23), .p_sum(pe23_data) );
-	PE pe24( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf60), .ifm_input1(ifm_buf61), .ifm_input2(ifm_buf62), .ifm_input3(ifm_buf63), 
+	PE pe24( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf60), .ifm_input1(ifm_buf61), .ifm_input2(ifm_buf62), .ifm_input3(ifm_buf63), 
 	.wgt_input0(wgt_buf20), .wgt_input1(wgt_buf21), .wgt_input2(wgt_buf22), .wgt_input3(wgt_buf23), .p_sum(pe24_data) );
 
 
-	PE pe30( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf30), .ifm_input1(ifm_buf31), .ifm_input2(ifm_buf32), .ifm_input3(ifm_buf33), 
+	PE pe30( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf30), .ifm_input1(ifm_buf31), .ifm_input2(ifm_buf32), .ifm_input3(ifm_buf33), 
 	.wgt_input0(wgt_buf30), .wgt_input1(wgt_buf31), .wgt_input2(wgt_buf32), .wgt_input3(wgt_buf33), .p_sum(pe30_data) );
-	PE pe31( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf40), .ifm_input1(ifm_buf41), .ifm_input2(ifm_buf42), .ifm_input3(ifm_buf43), 
+	PE pe31( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf40), .ifm_input1(ifm_buf41), .ifm_input2(ifm_buf42), .ifm_input3(ifm_buf43), 
 	.wgt_input0(wgt_buf30), .wgt_input1(wgt_buf31), .wgt_input2(wgt_buf32), .wgt_input3(wgt_buf33), .p_sum(pe31_data) );
-	PE pe32( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf50), .ifm_input1(ifm_buf51), .ifm_input2(ifm_buf52), .ifm_input3(ifm_buf53), 
+	PE pe32( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf50), .ifm_input1(ifm_buf51), .ifm_input2(ifm_buf52), .ifm_input3(ifm_buf53), 
 	.wgt_input0(wgt_buf30), .wgt_input1(wgt_buf31), .wgt_input2(wgt_buf32), .wgt_input3(wgt_buf33), .p_sum(pe32_data) );
-	PE pe33( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf60), .ifm_input1(ifm_buf61), .ifm_input2(ifm_buf62), .ifm_input3(ifm_buf63), 
+	PE pe33( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf60), .ifm_input1(ifm_buf61), .ifm_input2(ifm_buf62), .ifm_input3(ifm_buf63), 
 	.wgt_input0(wgt_buf30), .wgt_input1(wgt_buf31), .wgt_input2(wgt_buf32), .wgt_input3(wgt_buf33), .p_sum(pe33_data) );
-	PE pe34( .clk(clk), .rst_n(rst_n), .ifm_input0(ifm_buf70), .ifm_input1(ifm_buf71), .ifm_input2(ifm_buf72), .ifm_input3(ifm_buf73), 
+	PE pe34( .clk(clk), .stall(stall), .rst_n(rst_n), .ifm_input0(ifm_buf70), .ifm_input1(ifm_buf71), .ifm_input2(ifm_buf72), .ifm_input3(ifm_buf73), 
 	.wgt_input0(wgt_buf30), .wgt_input1(wgt_buf31), .wgt_input2(wgt_buf32), .wgt_input3(wgt_buf33), .p_sum(pe34_data) );	
 
     ///==-------------------------------------------------------------------------------------==
@@ -180,6 +182,7 @@ module CONV_ACC #(
         .depth(buf_depth)
     ) writeback_control (
         .clk(clk),
+        .stall(stall),
         .rst_n(rst_n),
         .start_init(start_conv),
         .p_filter_end(p_filter_end),
@@ -217,6 +220,7 @@ module CONV_ACC #(
         .depth(buf_depth)
     ) psum_buff0 (
         .clk(clk),
+        .stall(stall), 
         .rst_n(rst_n),
         .p_valid_data(p_valid_data),
         .p_write_zero(p_write_zero[0]),
@@ -236,6 +240,7 @@ module CONV_ACC #(
         .depth(buf_depth)
     ) psum_buff1 (
         .clk(clk),
+        .stall(stall), 
         .rst_n(rst_n),
         .p_valid_data(p_valid_data),
         .p_write_zero(p_write_zero[1]),
@@ -255,6 +260,7 @@ module CONV_ACC #(
         .depth(buf_depth)
     ) psum_buff2 (
         .clk(clk),
+        .stall(stall), 
         .rst_n(rst_n),
         .p_valid_data(p_valid_data),
         .p_write_zero(p_write_zero[2]),
@@ -274,6 +280,7 @@ module CONV_ACC #(
         .depth(buf_depth)
     ) psum_buff3 (
         .clk(clk),
+        .stall(stall), 
         .rst_n(rst_n),
         .p_valid_data(p_valid_data),
         .p_write_zero(p_write_zero[3]),
@@ -293,6 +300,7 @@ module CONV_ACC #(
         .depth(buf_depth)
     ) psum_buff4 (
         .clk(clk),
+        .stall(stall), 
         .rst_n(rst_n),
         .p_valid_data(p_valid_data),
         .p_write_zero(p_write_zero[4]),
