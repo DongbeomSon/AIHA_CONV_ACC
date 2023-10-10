@@ -68,7 +68,8 @@ module PSUM_BUFF #(
     assign valid_fifo_out = p_write_zero_reg;
 
     /// Relu Operation
-    assign fifo_out = fifo_out_i[data_width-1] ? 0 : fifo_out_i;
+    //assign fifo_out = fifo_out_i[data_width-1] ? 0 : fifo_out_i;
+    assign fifo_out = fifo_out_i;
 
     /// Fifo read and write
     /// When to write fifo

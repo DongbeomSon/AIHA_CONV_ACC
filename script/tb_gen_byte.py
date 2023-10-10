@@ -3,6 +3,7 @@ import torch.nn as nn
 import numpy as np
 import sys
 import math
+import torch.nn.functional as F
 
 group_num = sys.argv[1]
 group_num = int(group_num)
@@ -17,21 +18,21 @@ if type(group_num) is not int:
 
 print("TB geneartor GROUP_NUM : ", group_num)
 
-ic = 8
-ih = 64
-iw = 64
+ic = 32
+ih = 112
+iw = 112
 
-oc = 8
-oh = 62
-ow = 62
+oc = 32
+oh = 112
+ow = 112
 
 kk = 3
 
-pe_row = 16
+pe_row = 14
 
 tile_row = math.ceil(oh/pe_row)
 
-conv2d = nn.Conv2d(in_channels=ic, out_channels=oc, kernel_size=kk, padding=0, bias=False)
+conv2d = nn.Conv2d(in_channels=ic, out_channels=oc, kernel_size=kk, padding=1, bias=False)
 relu = nn.ReLU(inplace=False)
 
 # randomize input feature map
@@ -56,7 +57,6 @@ for i in range (group_num):
 
 
 ofm_relu = []
-
 for i in range (group_num):
     # setting the kernel of conv2d as weight
     conv2d.weight = nn.Parameter(weight[i])
@@ -65,11 +65,19 @@ for i in range (group_num):
     t = conv2d(ifm[i])
     ofm_relu.append(relu(t))
 
+
+ifm_padded = []
+padding_layer = nn.ZeroPad2d(1)
+
+for i in range(group_num):
+    padded_ifm = padding_layer(ifm[i])
+    ifm_padded.append(padded_ifm)
+
 ifm_np_l = []
 weight_np_l = []
 ofm_np_l = []
 
-for x in ifm:
+for x in ifm_padded:
     ifm_np_l.append(x.data.numpy().astype(int))
 
 for x in weight:
@@ -77,29 +85,32 @@ for x in weight:
     
 for x in ofm_relu:
     ofm_np_l.append(x.data.numpy().astype(int))
+
+
 # ifm_np = ifm.data.numpy().astype(int)
 # weight_np = weight.data.numpy().astype(int)
 # ofm_np = ofm_relu.data.numpy().astype(int)
 
 # write data as a 2's complement binary representation type
 
-tile_length = 16
-num_tile = 64//tile_length
+tile_length = 28
+num_tile = 114//tile_length
 
 ifm_num = 0
 with open("ifm.txt", "w") as f:
     for ifm_np in ifm_np_l:
         for ii in range(tile_row):
             for jj in range(num_tile):
-                for c in range(ic):
+                for c in range(8):
                     for j in range(tile_length + 2):
                         col = jj*tile_length + j
-                        for i in range(18):
-                            row = ii*16+i
-                            # print(row, c, ii)
-                            k = ifm_np[0, c, row, col] if ((row < 64) and (col < 64)) else 0
-                            s = str(k) + " "
-                            f.write(s)
+                        for cc in range(4):
+                            for i in range(16):
+                                row = ii*14+i
+                                # print(row, c, ii)
+                                k = ifm_np[0, c+8*cc, row, col]
+                                s = str(k) + " "
+                                f.write(s)
                         f.write("\n")
                 f.write("\n")    
             f.write("\n")
@@ -111,24 +122,25 @@ with open("ifm.dat", "wb") as f:
     for ifm_np in ifm_np_l:
         for ii in range(tile_row):
             for jj in range(num_tile):
-                for c in range(ic):
+                for c in range(8):
                     for j in range(tile_length + 2):
                         col = jj*tile_length + j
-                        for i in range(18):
-                            row = ii*16+i
-                            # print(row, c, ii)
-                            k = ifm_np[0, c, row, col] if ((row < 64) and (col < 64)) else np.int64(0)
-                            f.write(k.astype('int8').tobytes())
-                            ifm_num += 1
+                        for cc in range(4):
+                            for i in range(16):
+                                row = ii*14+i
+                                # print(row, c, ii)
+                                k = ifm_np[0, c+8*cc, row, col]
+                                f.write(k.astype('int8').tobytes())
+                                ifm_num += 1
     
     
 
 print("---ifm_num--- %d" % ifm_num)
 ifm_num = 0
 
-with open("wgt.txt", "w") as f:
+with open("wgt_debug.txt", "w") as f:
     for weight_np in weight_np_l:
-        for i in range(0, oc , 1):
+        for i in range(oc):
             for ii in range(tile_row):
                 for jj in range(num_tile):
                     for j in range(ic):
@@ -142,16 +154,34 @@ with open("wgt.txt", "w") as f:
                 f.write("\n")
             f.write("\n")
 
+with open("wgt.txt", "w") as f:
+    for weight_np in weight_np_l:
+        for ii in range(tile_row):
+            for jj in range(num_tile):
+                for j in range(8):
+                    for k in range(kk):
+                        for q in range(4):
+                            for i in range(0, oc , 1):
+                                for l in weight_np[i, 8*q+j, :, k]:
+                                    s = str(l) + " "
+                                    f.write(s)
+                    f.write("\n")
+                f.write("\n")
+            f.write("\n")
+        f.write("\n")
+        f.write("\n")
+
 with open("wgt.dat", "wb") as f:
     for weight_np in weight_np_l:
-        for i in range(0, oc , 1):
-            for ii in range(tile_row):
-                for jj in range(num_tile):
-                    for j in range(ic):
-                        for k in range(kk):
-                            for l in weight_np[i, j, :, k]:
-                                f.write(l.astype('int8').tobytes())
-                                ifm_num += 1
+        for ii in range(tile_row):
+            for jj in range(num_tile):
+                for j in range(8):
+                    for k in range(kk):
+                        for q in range(4):
+                            for i in range(0, oc , 1):
+                                for l in weight_np[i, 8*q+j, :, k]:
+                                    f.write(l.astype('int8').tobytes())
+                                    ifm_num += 1
 print("---wgt_num--- %d" % ifm_num)
 
 ofm = 0

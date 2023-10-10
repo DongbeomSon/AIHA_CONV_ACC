@@ -63,6 +63,7 @@ module acc_eng_ctrl #(
                 r_end_conv <= 1;
             else if (r_end_conv && !write_buffer_wait)
                 r_end_conv <= 0;
+            else r_end_conv <= r_end_conv;
         end
     end
 

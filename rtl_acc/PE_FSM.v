@@ -40,7 +40,7 @@ parameter [2:0]
     S2 = 3'b010,
     FINISH = 3'b100; 
 
-parameter[6:0] tile_length =  16;
+parameter[6:0] tile_length =  28;
 
 always @ (posedge clk or negedge rst_n)
     if(!rst_n)
@@ -63,7 +63,7 @@ begin
     next_state = 3'bx; 
     case(current_state)
         IDLE: 
-            if(start_again && cnt1 == 0 && cnt2 == 0 && cnt3 == co*26)
+            if(start_again && cnt1 == 0 && cnt2 == 0 && cnt3 == 32)
                 next_state = FINISH;
             else if(start_again)
                 next_state = S1;
@@ -142,7 +142,7 @@ always @ (posedge clk or negedge rst_n)
                         cnt2 <= cnt2 + 1;
 
                     if(cnt2 == 0)
-                        if(cnt3 == co*52)
+                        if(cnt3 == 32)
                             cnt3 <= 0;
                         else
                             cnt3 <= cnt3 + 1;

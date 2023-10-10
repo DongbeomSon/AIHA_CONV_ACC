@@ -9,25 +9,24 @@
 
 `define CI 0
 `define CO 0
-`define TI 16
-`define TI_FACTOR 64/`TI
+`define TI 28
+`define TI_FACTOR 112/`TI
 `define CFG_CI (`CI+1)*8
 `define CFG_CO (`CO+1)*8
-`define IFM_LEN `CFG_CI*(`TI+2)*`TI_FACTOR*18*4
-`define WGT_LEN 3*3*`CFG_CI*`CFG_CO*8*`TI_FACTOR
+`define IFM_LEN 491520 //`CFG_CI*(`TI+2)*`TI_FACTOR*16*8
+`define WGT_LEN 9216//3*3*4*8*32*32 //3*3*`CFG_CI*`CFG_CO*8*`TI_FACTOR
 
 `define IFM_LEN_WORD `IFM_LEN/64
 `define WGT_LEN_WORD `WGT_LEN/64
 
-`define BUF_DEPTH 62
-`define OFM_C `CFG_CO
+`define BUF_DEPTH 112
+`define OFM_C 32
 `define OFM_H `BUF_DEPTH
 `define OFM_W `BUF_DEPTH
 `define OUT_DATA_WIDTH 32
 
 //`define OFM_LEN `OFM_H*`OFM_W*`CFG_CO*4
-`define OFM_LEN 131072
-
+`define OFM_LEN 1605632
 `define OFM_LEN_WORD `OFM_LEN/64
 
 
@@ -465,7 +464,7 @@ end
   endtask
 
 
-    reg signed [31:0] ofm [0:`OFM_C-1][0:`OFM_H+1][0:`OFM_W+1];
+    reg signed [31:0] ofm [0:`OFM_C-1][0:`OFM_H-1][0:`OFM_W-1];
     integer toc;
     integer toh;
     integer tow;
@@ -553,23 +552,22 @@ initial  begin : main_test_routine
                   th = 0;
                   ow = 0;
                   thcnt = 0;
-                  for(index = 0; index < `OFM_LEN_WORD; index++) begin
-                    for(i = 0; i < 16; i=i+1) begin
-                      for(k = 0; k < 8; k=k+1)begin
-						ofm[oc][i+th][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index][(32*(15-i)+(3-k)*8) +: 8];
+
+                  for(toh=0; toh<8; toh = toh+1) begin  
+                    for(ow=0; ow<112; ow=ow+1) begin
+                      for(th=0; th<14; th=th+1) begin
+                        for(i = 0; i < 16; i=i+1) begin
+                          for(k = 0; k < 4; k=k+1) begin
+                            ofm[i][th+toh*14][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index][(32*(15-i)+(3-k)*8) +: 8];
+                            ofm[i+16][th+toh*14][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index+1][(32*(15-i)+(3-k)*8) +: 8];
+                          end
+                        end
+                        index = index + 2;
                       end
                     end
-                    ow = ow + 1;
-                          if (ow == 64) begin
-                              ow = 0;
-                              th = th + 16;
-                          end
-                          if (th == 64) begin
-                              th = 0;
-                              oc = oc + 1;
-                              $display("\033[33m[ConvKernel: ] Computing channel: %d\033[0m", oc);
-                          end
-                  end
+                   end
+                 $display("\033[33m[ConvKernel: ] Computing channel: %d\033[0m", oc);
+
 
                   for (toc=0; toc < `OFM_C; toc = toc + 1) begin
                       $fwrite(fp_w, "\n\n");

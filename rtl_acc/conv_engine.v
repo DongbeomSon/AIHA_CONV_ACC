@@ -8,12 +8,12 @@
 `timescale 1ns/1ps
 
 module conv_engine #(
-	parameter IFM_TILE_ROW = 18,
+	parameter IFM_TILE_ROW = 16,
 	parameter KERNEL_SIZE = 3,
     parameter WIFM_DATA_WIDTH = 512,
     parameter WWGT_DATA_WIDTH = 512,
-	parameter IFM_DATA_WIDTH = 8*IFM_TILE_ROW,
-    parameter WGT_DATA_WIDTH = 8*KERNEL_SIZE,
+	parameter IFM_DATA_WIDTH = 8*IFM_TILE_ROW*4,
+    parameter WGT_DATA_WIDTH = 8*KERNEL_SIZE*32*4,
 
     parameter IFM_BUFF_WORD_NUM = 64,
     parameter IFM_BUFF_ADDR_WIDTH  = $clog2(IFM_BUFF_WORD_NUM) + 1,
@@ -23,7 +23,7 @@ module conv_engine #(
 	
 
     parameter OUT_DATA_WIDTH = 32,
-    parameter TI = 16
+    parameter TI = 28
 ) (
     input           clk,
     input           rst_n,
@@ -90,15 +90,16 @@ module conv_engine #(
     wire   wrapped_ifm_req;
     wire  [WIFM_DATA_WIDTH-1:0] wrapped_ifm;
     wire ifm_buf_rdy;
-
+    wire wgt_rdy;
     wire ifm_read;
     wire wgt_read;
+    wire    [IFM_DATA_WIDTH-1:0] ifm;
 
     switch_buffer  #(
         .DATA_WIDTH (WIFM_DATA_WIDTH),
-        .DATA_NUM_BYTE (41472)
+        .DATA_NUM_BYTE (491520),
    //     .DATA_NUM (IFM_BUFF_WORD_NUM),
-   //     .FIFO_ADDR_WIDTH (IFM_BUFF_ADDR_WIDTH)
+        .FIFO_ADDR_WIDTH (13)
     ) ifm_buffer (
         .clk        (clk),
         .rst_n      (rst_n),
@@ -114,8 +115,8 @@ module conv_engine #(
 
         .addr_offset (ifm_offset),
 
-        .pop_req   (wrapped_ifm_req),
-        .o_data     (wrapped_ifm), 
+        .pop_req   (ifm_read),
+        .o_data     (ifm), 
 
         .op_start   (op_start),
         .end_conv   (end_conv),
@@ -129,7 +130,7 @@ module conv_engine #(
 
     switch_buffer #(
         .DATA_WIDTH (WWGT_DATA_WIDTH),
-        .DATA_NUM_BYTE (18432)
+        .DATA_NUM_BYTE (9216)
     //    .DATA_NUM (WGT_BUFF_WORD_NUM),
     //    .FIFO_ADDR_WIDTH (WGT_BUFF_ADDR_WIDTH) //log_2 DATANUM + 1
         ) wgt_buffer(
@@ -156,7 +157,7 @@ module conv_engine #(
         .buf_rdy    (wgt_buf_rdy)
     );
 
-    wire start_conv = ifm_buf_rdy & wgt_buf_rdy;
+    wire start_conv = ifm_buf_rdy & wgt_rdy;
     reg r_start_conv;
     reg start_conv_pulse;
 
@@ -171,37 +172,63 @@ module conv_engine #(
         end
     end
 
-    wire    [IFM_DATA_WIDTH-1:0] ifm;
-    ifm_parser #(.INPUT_WIDTH(512), .OUTPUT_WIDTH(IFM_DATA_WIDTH), .REG_NUM(9)) ifm_parser(
-        .clk    (clk),
-        .rst_n  (rst_n),
-		.start_conv_pulse (start_conv_pulse),
-
-        .fm     (wrapped_ifm),
-        .ifm_read (ifm_read),
- //       .init_word  (start_conv_pulse),
-
-        .parse_out (ifm),
-        .input_req (wrapped_ifm_req)
-    );
-
 
     wire    [WGT_DATA_WIDTH-1:0] wgt;
-    ifm_parser #(.INPUT_WIDTH(512), .OUTPUT_WIDTH(WGT_DATA_WIDTH),  .REG_NUM(3)) wgt_parser(
+    wgt_resizebuffer #(.INPUT_WIDTH(512), .OUTPUT_WIDTH(WGT_DATA_WIDTH)) wgt_resizebuffer(
         .clk    (clk),
         .rst_n  (rst_n),
-		.start_conv_pulse (start_conv_pulse),
-
         .fm     (wrapped_wgt),
-        .ifm_read (wgt_read),
- //       .init_word  (start_conv_pulse),
+        .wgt_read (wgt_read),
+        .buf_rdy (wgt_buf_rdy),
 
         .parse_out (wgt),
-        .input_req (wrapped_wgt_req)
+        .input_req (wrapped_wgt_req),
+        .buf_full   (wgt_rdy)
     );
 
-    wire [511:0] ofm_port;
-	wire         ofm_port_v;
+    wire [511:0] out_ofm0_port0;
+    wire [511:0] out_ofm0_port1;
+    wire [511:0] out_ofm0_port2;
+    wire [511:0] out_ofm0_port3;
+    wire [511:0] out_ofm0_port4;
+    wire [511:0] out_ofm0_port5;
+    wire [511:0] out_ofm0_port6;
+    wire [511:0] out_ofm0_port7;
+    wire [511:0] out_ofm0_port8;
+    wire [511:0] out_ofm0_port9;
+    wire [511:0] out_ofm0_port10;
+    wire [511:0] out_ofm0_port11;
+    wire [511:0] out_ofm0_port12;
+    wire [511:0] out_ofm0_port13;
+    wire [511:0] out_ofm1_port0;
+    wire [511:0] out_ofm1_port1;
+    wire [511:0] out_ofm1_port2;
+    wire [511:0] out_ofm1_port3;
+    wire [511:0] out_ofm1_port4;
+    wire [511:0] out_ofm1_port5;
+    wire [511:0] out_ofm1_port6;
+    wire [511:0] out_ofm1_port7;
+    wire [511:0] out_ofm1_port8;
+    wire [511:0] out_ofm1_port9;
+    wire [511:0] out_ofm1_port10;
+    wire [511:0] out_ofm1_port11;
+    wire [511:0] out_ofm1_port12;
+    wire [511:0] out_ofm1_port13;
+    wire out_ofm_port_v0;
+    wire out_ofm_port_v1;
+    wire out_ofm_port_v2;
+    wire out_ofm_port_v3;
+    wire out_ofm_port_v4;
+    wire out_ofm_port_v5;
+    wire out_ofm_port_v6;
+    wire out_ofm_port_v7;
+    wire out_ofm_port_v8;
+    wire out_ofm_port_v9;
+    wire out_ofm_port_v10;
+    wire out_ofm_port_v11;
+    wire out_ofm_port_v12;
+    wire out_ofm_port_v13;
+    wire [31:0] out_ofm0_port0_debug[0:13];
 
     CONV_ACC #(
         .out_data_width(OUT_DATA_WIDTH),
@@ -217,29 +244,70 @@ module conv_engine #(
         .cfg_co(r_cfg_co),
         .ifm(ifm),
         .weight(wgt),
-        .ofm_port(ofm_port),
-        .ofm_port_v(ofm_port_v),
+        .out_ofm0_port0(out_ofm0_port0),
+        .out_ofm0_port1(out_ofm0_port1),
+        .out_ofm0_port2(out_ofm0_port2),
+        .out_ofm0_port3(out_ofm0_port3),
+        .out_ofm0_port4(out_ofm0_port4),
+        .out_ofm0_port5(out_ofm0_port5),
+        .out_ofm0_port6(out_ofm0_port6),
+        .out_ofm0_port7(out_ofm0_port7),
+        .out_ofm0_port8(out_ofm0_port8),
+        .out_ofm0_port9(out_ofm0_port9),
+        .out_ofm0_port10(out_ofm0_port10),
+        .out_ofm0_port11(out_ofm0_port11),
+        .out_ofm0_port12(out_ofm0_port12),
+        .out_ofm0_port13(out_ofm0_port13),
+        .out_ofm1_port0(out_ofm1_port0),
+        .out_ofm1_port1(out_ofm1_port1),
+        .out_ofm1_port2(out_ofm1_port2),
+        .out_ofm1_port3(out_ofm1_port3),
+        .out_ofm1_port4(out_ofm1_port4),
+        .out_ofm1_port5(out_ofm1_port5),
+        .out_ofm1_port6(out_ofm1_port6),
+        .out_ofm1_port7(out_ofm1_port7),
+        .out_ofm1_port8(out_ofm1_port8),
+        .out_ofm1_port9(out_ofm1_port9),
+        .out_ofm1_port10(out_ofm1_port10),
+        .out_ofm1_port11(out_ofm1_port11),
+        .out_ofm1_port12(out_ofm1_port12),
+        .out_ofm1_port13(out_ofm1_port13),
+        .out_ofm_port_v0(out_ofm_port_v0),
+        .out_ofm_port_v1(out_ofm_port_v1),
+        .out_ofm_port_v2(out_ofm_port_v2),
+        .out_ofm_port_v3(out_ofm_port_v3),
+        .out_ofm_port_v4(out_ofm_port_v4),
+        .out_ofm_port_v5(out_ofm_port_v5),
+        .out_ofm_port_v6(out_ofm_port_v6),
+        .out_ofm_port_v7(out_ofm_port_v7),
+        .out_ofm_port_v8(out_ofm_port_v8),
+        .out_ofm_port_v9(out_ofm_port_v9),
+        .out_ofm_port_v10(out_ofm_port_v10),
+        .out_ofm_port_v11(out_ofm_port_v11),
+        .out_ofm_port_v12(out_ofm_port_v12),
+        .out_ofm_port_v13(out_ofm_port_v13),        
         .ifm_read(ifm_read),
         .wgt_read(wgt_read),
         .end_op(end_conv)
     );
 
-    //counter
+    assign out_ofm0_port0_debug[0] = out_ofm0_port0[31:0];
+    assign out_ofm0_port0_debug[1] = out_ofm0_port1[31:0];
+    assign out_ofm0_port0_debug[2] = out_ofm0_port2[31:0];
+    assign out_ofm0_port0_debug[3] = out_ofm0_port3[31:0];
+    assign out_ofm0_port0_debug[4] = out_ofm0_port4[31:0];
+    assign out_ofm0_port0_debug[5] = out_ofm0_port5[31:0];
+    assign out_ofm0_port0_debug[6] = out_ofm0_port6[31:0];
+    assign out_ofm0_port0_debug[7] = out_ofm0_port7[31:0];
+    assign out_ofm0_port0_debug[8] = out_ofm0_port8[31:0];
+    assign out_ofm0_port0_debug[9] = out_ofm0_port9[31:0];
+    assign out_ofm0_port0_debug[10] = out_ofm0_port10[31:0];
+    assign out_ofm0_port0_debug[11] = out_ofm0_port11[31:0];
+    assign out_ofm0_port0_debug[12] = out_ofm0_port12[31:0];
+    assign out_ofm0_port0_debug[13] = out_ofm0_port13[31:0];
 
-    reg [31:0] ifm_counter;
-    reg [31:0] wgt_counter;
-    reg [31:0] ofm_counter;
-    always @(posedge clk, negedge rst_n) begin
-        if(!rst_n) begin
-            ifm_counter <= 0;
-            wgt_counter <= 0;
-            ofm_counter <= 0;
-        end else begin
-            ifm_counter <= ifm_read ? ifm_counter + 1 : ifm_counter;
-            wgt_counter <= wgt_read ? wgt_counter + 1 : wgt_counter;
-            ofm_counter <= ofm_port_v ? ofm_counter + 16 : ofm_counter;
-        end
-    end
+
+
 
     wire [63:0] wmst_addr;
 
@@ -247,9 +315,48 @@ module conv_engine #(
         .clk(clk),
         .rst_n(rst_n),
 
-        .ofm_port_v(ofm_port_v),
-
-        .ofm_port(ofm_port),
+        .out_ofm0_port0(out_ofm0_port0),
+        .out_ofm0_port1(out_ofm0_port1),
+        .out_ofm0_port2(out_ofm0_port2),
+        .out_ofm0_port3(out_ofm0_port3),
+        .out_ofm0_port4(out_ofm0_port4),
+        .out_ofm0_port5(out_ofm0_port5),
+        .out_ofm0_port6(out_ofm0_port6),
+        .out_ofm0_port7(out_ofm0_port7),
+        .out_ofm0_port8(out_ofm0_port8),
+        .out_ofm0_port9(out_ofm0_port9),
+        .out_ofm0_port10(out_ofm0_port10),
+        .out_ofm0_port11(out_ofm0_port11),
+        .out_ofm0_port12(out_ofm0_port12),
+        .out_ofm0_port13(out_ofm0_port13),
+        .out_ofm1_port0(out_ofm1_port0),
+        .out_ofm1_port1(out_ofm1_port1),
+        .out_ofm1_port2(out_ofm1_port2),
+        .out_ofm1_port3(out_ofm1_port3),
+        .out_ofm1_port4(out_ofm1_port4),
+        .out_ofm1_port5(out_ofm1_port5),
+        .out_ofm1_port6(out_ofm1_port6),
+        .out_ofm1_port7(out_ofm1_port7),
+        .out_ofm1_port8(out_ofm1_port8),
+        .out_ofm1_port9(out_ofm1_port9),
+        .out_ofm1_port10(out_ofm1_port10),
+        .out_ofm1_port11(out_ofm1_port11),
+        .out_ofm1_port12(out_ofm1_port12),
+        .out_ofm1_port13(out_ofm1_port13),
+        .out_ofm_port_v0(out_ofm_port_v0),
+        .out_ofm_port_v1(out_ofm_port_v1),
+        .out_ofm_port_v2(out_ofm_port_v2),
+        .out_ofm_port_v3(out_ofm_port_v3),
+        .out_ofm_port_v4(out_ofm_port_v4),
+        .out_ofm_port_v5(out_ofm_port_v5),
+        .out_ofm_port_v6(out_ofm_port_v6),
+        .out_ofm_port_v7(out_ofm_port_v7),
+        .out_ofm_port_v8(out_ofm_port_v8),
+        .out_ofm_port_v9(out_ofm_port_v9),
+        .out_ofm_port_v10(out_ofm_port_v10),
+        .out_ofm_port_v11(out_ofm_port_v11),
+        .out_ofm_port_v12(out_ofm_port_v12),
+        .out_ofm_port_v13(out_ofm_port_v13),  
 
         .end_conv(end_conv),
 

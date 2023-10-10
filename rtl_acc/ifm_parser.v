@@ -1,7 +1,7 @@
 module ifm_parser #(
     parameter INPUT_WIDTH = 512,
-    parameter OUTPUT_WIDTH = 144,
-	parameter REG_NUM = 9,
+    parameter OUTPUT_WIDTH = 128,
+	parameter REG_NUM = 1,
 	parameter COMMON_DEN = INPUT_WIDTH * REG_NUM,
     parameter MAX_CNT = COMMON_DEN / OUTPUT_WIDTH
 
@@ -18,7 +18,7 @@ module ifm_parser #(
     output [OUTPUT_WIDTH-1:0] parse_out,
     output reg input_req
 );
-    reg [3:0] reg_cnt;
+    reg [1:0] reg_cnt;
 	reg [6:0] fm_cnt;
 	
 	reg [COMMON_DEN-1:0]   reg_fm;

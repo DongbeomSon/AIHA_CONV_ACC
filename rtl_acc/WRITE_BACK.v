@@ -4,7 +4,7 @@
 `timescale 1ns/1ps
 
 module WRITE_BACK #(
-    parameter data_width = 25,
+    parameter data_width = 32,
     parameter depth = 61
 ) (
     input  clk,
@@ -39,13 +39,13 @@ module WRITE_BACK #(
     input  row12_valid,
 	input  [data_width-1:0] row13,
     input  row13_valid,
-	input  [data_width-1:0] row14,
+    input  [data_width-1:0] row14,
     input  row14_valid,
 	input  [data_width-1:0] row15,
     input  row15_valid,
     output p_write_zero,
     output p_init,
-    output [511:0] out_port,
+    output [127:0] out_port,
     output port_valid,
     output start_conv,
     output odd_cnt,
@@ -73,6 +73,10 @@ module WRITE_BACK #(
     reg [3:0] st_cur;
     reg [7:0] cnt;
     reg r_end_conv;
+    reg [data_width-1:0] channel_sum1[0:7];
+    reg [data_width-1:0] channel_sum2[0:7];
+
+
     /// State transfer
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n)
@@ -131,10 +135,13 @@ module WRITE_BACK #(
     /// Output logic
     reg p_write_zero_r;
     reg p_init_r;
-    reg [511:0] out_port_r;
-    reg port_valid_r;
+    reg [127:0] out_port_r;
+    reg port_valid_r[0:2];
     reg start_conv_r;
-
+    wire row_valid = (row0_valid & row1_valid & row2_valid & row3_valid 
+					 & row4_valid & row5_valid & row6_valid & row7_valid
+					 & row8_valid & row9_valid & row10_valid & row11_valid 
+					 & row12_valid & row13_valid);	
     /// Output start conv signal
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n)
@@ -143,6 +150,74 @@ module WRITE_BACK #(
             start_conv_r <= 1;
         else
             start_conv_r <= 0;
+    end
+
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            channel_sum1[0] <= 0;
+            channel_sum1[1] <= 0;
+            channel_sum1[2] <= 0;
+            channel_sum1[3] <= 0;
+            channel_sum1[4] <= 0;
+            channel_sum1[5] <= 0;
+            channel_sum1[6] <= 0;
+            channel_sum1[7] <= 0;
+            channel_sum2[0] <= 0;
+            channel_sum2[1] <= 0;
+            channel_sum2[2] <= 0;
+            channel_sum2[3] <= 0;
+            port_valid_r[0] <= 0;
+        end
+        else if (row_valid) begin
+            channel_sum1[0] <= row0 + row4;
+            channel_sum1[1] <= row8 + row12;
+            channel_sum1[2] <= row1 + row5;
+            channel_sum1[3] <= row9 + row13;
+            channel_sum1[4] <= row2 + row6;
+            channel_sum1[5] <= row10 + row14;
+            channel_sum1[6] <= row3 + row7;
+            channel_sum1[7] <= row11 + row15;
+            port_valid_r[0] <= row_valid;
+        end
+        else begin
+            channel_sum1[0] <= 0;
+            channel_sum1[1] <= 0;
+            channel_sum1[2] <= 0;
+            channel_sum1[3] <= 0;
+            channel_sum1[4] <= 0;
+            channel_sum1[5] <= 0;
+            channel_sum1[6] <= 0;
+            channel_sum1[7] <= 0;
+            channel_sum2[0] <= 0;
+            channel_sum2[1] <= 0;
+            channel_sum2[2] <= 0;
+            channel_sum2[3] <= 0;
+            port_valid_r[0] <= 0;
+        end
+    end
+
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            channel_sum2[0] <= 0;
+            channel_sum2[1] <= 0;
+            channel_sum2[2] <= 0;
+            channel_sum2[3] <= 0;
+            port_valid_r[1] <= 0;
+        end
+        else if (port_valid_r[0]) begin
+            channel_sum2[0] <= channel_sum1[0] + channel_sum1[1];
+            channel_sum2[1] <= channel_sum1[2] + channel_sum1[3];
+            channel_sum2[2] <= channel_sum1[4] + channel_sum1[5];
+            channel_sum2[3] <= channel_sum1[6] + channel_sum1[7];
+            port_valid_r[1] <= port_valid_r[0];
+        end
+        else begin
+            channel_sum2[0] <= 0;
+            channel_sum2[1] <= 0;
+            channel_sum2[2] <= 0;
+            channel_sum2[3] <= 0;
+            port_valid_r[1] <= 0;
+        end
     end
     assign start_conv = start_conv_r;
     /// PingPong buffer controller signal
@@ -210,46 +285,30 @@ module WRITE_BACK #(
         else r_end_conv <= r_end_conv ? 1 : end_conv;
     end
 
-	wire row_valid = (row0_valid & row1_valid & row2_valid & row3_valid 
-						  & row4_valid & row5_valid & row6_valid & row7_valid
-						  & row8_valid & row9_valid & row10_valid & row11_valid 
-						  & row12_valid & row13_valid & row14_valid & row15_valid);	
+
 		
 
     /// Final result, a big mux
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             out_port_r <= 0;
-			port_valid_r <= 0;
+			port_valid_r[2] <= 0;
         end else begin
-            if(row_valid)
+            if(port_valid_r[1])
                 begin
-                    out_port_r[31:0] <= row0;
-					out_port_r[63:32] <= row1;
-					out_port_r[95:64] <= row2;
-					out_port_r[127:96] <= row3;
-					out_port_r[159:128] <= row4;
-					out_port_r[191:160] <= row5;
-					out_port_r[223:192] <= row6;
-					out_port_r[255:224] <= row7;
-                    out_port_r[287:256] <= row8;
-					out_port_r[319:288] <= row9;
-					out_port_r[351:320] <= row10;
-					out_port_r[383:352] <= row11;
-					out_port_r[415:384] <= row12;
-					out_port_r[447:416] <= row13;
-					out_port_r[479:448] <= row14;
-					out_port_r[511:480] <= row15;
-					
-					port_valid_r <= row_valid;
+                    out_port_r[31:0] <= channel_sum2[0][data_width-1] ? 0 : channel_sum2[0];
+					out_port_r[63:32] <= channel_sum2[1][data_width-1] ? 0 : channel_sum2[1];
+					out_port_r[95:64] <= channel_sum2[2][data_width-1] ? 0 : channel_sum2[2];
+					out_port_r[127:96] <= channel_sum2[3][data_width-1] ? 0 : channel_sum2[3];
+					port_valid_r[2] <= port_valid_r[1];
 				end
 			else
 				begin
 					out_port_r <= 0;
-					port_valid_r <= 0;
+					port_valid_r[2] <= 0;
 				end
 		end
     end
     assign out_port = out_port_r;
-    assign port_valid = port_valid_r;
+    assign port_valid = port_valid_r[2];
 endmodule

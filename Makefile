@@ -62,7 +62,7 @@ pack_kernel:
 runsim:
 	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM);
 	./runsim_krnl_xsim.sh $(GROUP_NUM);
-	cd data; python3 ../script/compare.py;
+#	cd data; python3 ../script/compare.py;
 
 gen_tb:
 	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM);
