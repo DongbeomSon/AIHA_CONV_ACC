@@ -25,9 +25,11 @@
 // Kernel krnl_cbc argument id
 #define krnl_acc_arg_CFG_CI       0
 #define krnl_acc_arg_CFG_CO       1
-#define krnl_acc_arg_IFM_ADDR_BASE  2
-#define krnl_acc_arg_WGT_ADDR_BASE   3
-#define krnl_acc_arg_OFM_ADDR_BASE  4
+#define krnl_acc_arg_IFM_SIZE      2
+#define krnl_acc_arg_WGT_SIZE       3
+#define krnl_acc_arg_IFM_ADDR_BASE  4
+#define krnl_acc_arg_WGT_ADDR_BASE   5
+#define krnl_acc_arg_OFM_ADDR_BASE  6
 
 #define TI 16
 #define TI_FACTOR 4
@@ -150,9 +152,11 @@ void print_help(void) {
 }
 
 
-void conv2d_thread(xrt::run run_krnl_acc, xrt::bo ifm_buffer, xrt::bo wgt_buffer, xrt::bo ofm_buffer, int ci, int co) {
+void conv2d_thread(xrt::run run_krnl_acc, xrt::bo ifm_buffer, xrt::bo wgt_buffer, xrt::bo ofm_buffer, int ci, int co, int ifm_size, int wgt_size) {
     run_krnl_acc.set_arg(krnl_acc_arg_CFG_CI, ci);
     run_krnl_acc.set_arg(krnl_acc_arg_CFG_CO, co);
+    run_krnl_acc.set_arg(krnl_acc_arg_IFM_SIZE, ifm_size);
+    run_krnl_acc.set_arg(krnl_acc_arg_WGT_SIZE, wgt_size);
     run_krnl_acc.set_arg(krnl_acc_arg_IFM_ADDR_BASE, ifm_buffer);
     run_krnl_acc.set_arg(krnl_acc_arg_WGT_ADDR_BASE, wgt_buffer);
     run_krnl_acc.set_arg(krnl_acc_arg_OFM_ADDR_BASE, ofm_buffer);
@@ -169,11 +173,14 @@ float conv2d(xrt::kernel kernel,                     // kernel handle
                         int groups_num,                          // groups number
                         int ctrl_mode,                           // 0 - ap_ctrl_hs; 1 - ap_ctrl_chain
                         int ci,                     // input channel = 8 * (ci + 1)
-                        int co)                     // output channel = 8 * (co + 1)
+                        int co,
+                        int ifm_size,
+                        int wgt_size)                     // output channel = 8 * (co + 1)
 {
     struct timeval kernels_start_time, kernels_finish_time; // kernel execution time record
 
     int thread_num = groups_num;    // thread number used to handle all data
+    // int thread_num = 1;
 //    std::cout << "conv2d called " << std::endl;
     std::vector<xrt::run> run_krnl_acc;
     std::vector<std::thread> t(thread_num);
@@ -194,7 +201,7 @@ float conv2d(xrt::kernel kernel,                     // kernel handle
             for (i = 0; i < thread_num; i++)
             {
                 t[i] = std::thread(conv2d_thread, run_krnl_acc[i], ifm_sub_buffer[k * thread_num + i], wgt_sub_buffer[k * thread_num + i], ofm_sub_buffer[k * thread_num + i],
-                             ci, co);
+                             ci, co, ifm_size, wgt_size);
             }
             for (i = 0; i < thread_num; i++)
             {
@@ -206,7 +213,7 @@ float conv2d(xrt::kernel kernel,                     // kernel handle
             //run_krnl_cbc[i].set_arg(krnl_cbc_arg_SRC_ADDR, input_sub_buffer[k * thread_num + i]);   // use sub-buffer for source pointer argument
             //run_krnl_cbc[i].set_arg(krnl_cbc_arg_DEST_ADDR, output_sub_buffer[k * thread_num + i]); // use sub-buffer for source pointer argument
             t[i] = std::thread(conv2d_thread, run_krnl_acc[i], ifm_sub_buffer[k * thread_num + i], wgt_sub_buffer[k * thread_num + i], ofm_sub_buffer[k * thread_num + i], 
-                            ci, co);
+                            ci, co, ifm_size, wgt_size);
         }
         for (i = 0; i < residue; i++)
         {
@@ -216,7 +223,7 @@ float conv2d(xrt::kernel kernel,                     // kernel handle
     else // emulate ap_ctrl_hs running mode
     {
         for (int i = 0; i < groups_num; i++) {
-            conv2d_thread(run_krnl_acc[0], ifm_sub_buffer[i], wgt_sub_buffer[i], ofm_sub_buffer[i], ci, co);
+            conv2d_thread(run_krnl_acc[0], ifm_sub_buffer[i], wgt_sub_buffer[i], ofm_sub_buffer[i], ci, co, ifm_size, wgt_size);
         }
     }
 
@@ -231,12 +238,12 @@ float conv2d(xrt::kernel kernel,                     // kernel handle
 int main(int argc, char *argv[]) {
 
     int opt;
-    const char *optstring = "g:i:o:sh";
+    const char *optstring = "g:i:o:sh:d";
 
     int groups_num = 1; 
-    int cfg_ci = 0;
+    int cfg_ci = 15;
     int cfg_co = 0;
-
+    bool ILA_flag = false;
     int chain = 1;      // 0 means ap_ctrl_hs mode, 1 mean ap_ctrl_chain mode
 
     while ((opt = getopt(argc, argv, optstring)) != -1) {
@@ -254,6 +261,10 @@ int main(int argc, char *argv[]) {
 
         if (opt == 's') {
             chain = 0;
+        }
+
+        if (opt == 'd'){
+            ILA_flag = true;
         }
 
         if (opt == 'h') {
@@ -333,7 +344,7 @@ int main(int argc, char *argv[]) {
                                                 "krnl_acc",
                                                 xrt::kernel::cu_access_mode::exclusive);
 
-    wait_for_enter("\nPress ENTER to continue after setting up ILA trigger...");
+    if (ILA_flag) wait_for_enter("\nPress ENTER to continue after setting up ILA trigger...");
     
     // create device buffer objects
     std::cout << "Create input and output device buffers" << std::endl;
@@ -373,7 +384,7 @@ int main(int argc, char *argv[]) {
 
     // Run the kernel
     total_run_time = conv2d(kernel_krnl_acc, ifm_sub_buffer, wgt_sub_buffer, ofm_sub_buffer,
-                                      groups_num, chain, cfg_ci, cfg_co);
+                                      groups_num, chain, cfg_ci, cfg_co, ifm_len, wgt_len);
 
     // Dump result data from output device buffer
     ofm_buffer.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
