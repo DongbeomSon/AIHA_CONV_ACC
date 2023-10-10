@@ -7,8 +7,8 @@
 
 `timescale 1ns/1ps
 
-`define CI 0
-`define CO 0
+// `define CI 0
+// `define CO 0
 `define TI 16
 `define TI_FACTOR 64/`TI
 `define CFG_CI (`CI+1)*8
@@ -47,7 +47,10 @@ parameter CTRL_READY_MASK        = 32'h00000008;
 parameter CTRL_CONTINUE_MASK     = 32'h00000010; 
 // krnl_acc argument
 parameter ACC_CFG_CI      = 32'h0000_0010; 
-parameter ACC_CFG_CO      = 32'h0000_0018; 
+parameter ACC_CFG_CO      = 32'h0000_0014;
+parameter ACC_IFM_SIZE      = 32'h0000_0018; 
+parameter ACC_WGT_SIZE      = 32'h0000_001C;  
+// parameter ACC_INPUT_WIDTH      = 32'h0000_001C; 
 parameter ACC_ADDR_IFM_ADDR_BASE_0 = 32'h0000_0020;
 parameter ACC_ADDR_IFM_ADDR_BASE_1 = 32'h0000_0024;
 parameter ACC_ADDR_WGT_ADDR_BASE_0 = 32'h0000_0028;
@@ -496,18 +499,22 @@ initial  begin : main_test_routine
     int oc, oh, tw, index;
     int thcnt;
 
+    int ifm_size = `IFM_LEN;
+    int wgt_size = `WGT_LEN;
+
 //    file_ptr = $fopen("./script/test/ifm.dat", "rb");
 //    file_ptr = $fopen("../common/ifm.dat", "rb");
     file_ptr = $fopen("./data/ifm.dat", "rb");
-    $display ("IFM_DATA SIZE : %d" , `IFM_LEN);
+    $display ("IFM_DATA SIZE : %d" , ifm_size);
     temp = $fread(ifm_data, file_ptr);
     $fclose(file_ptr);    
     file_ptr = $fopen("./data/wgt.dat", "rb");
-      $display ("WGT_DATA SIZE : %d" , `WGT_LEN);
+      $display ("WGT_DATA SIZE : %d" , wgt_size);
     temp = $fread(wgt_data, file_ptr);
     $fclose(file_ptr); 
 
         $display ("OFM_DATA SIZE : %d" , `OFM_LEN);
+        $display ("INPUT SIZE : %d" , `IW);
 
     #2000
         init_vips();
@@ -520,8 +527,13 @@ initial  begin : main_test_routine
     $display("  CONVOLUTION ACCLEALATOR TEST, total %1d groups", `GROUP_NUM);
     $display("-------------------------------------------------------------------------------------");    
     // set kernel registers                      
-    blocking_write_register (krnl_acc_ctrl, ACC_CFG_CI, 32'h`CI);                 // CI = 0 >> CFG_CI = 8 = 8*(CI+1)
-    blocking_write_register (krnl_acc_ctrl, ACC_CFG_CO, 32'h`CO);                 // CO = 0 >> CFG_CI = 8 = 8*(CI+1)
+    blocking_write_register (krnl_acc_ctrl, ACC_CFG_CI, 32'd`CI);                 // CI = 0 >> CFG_CI = 8 = 8*(CI+1)
+    blocking_write_register (krnl_acc_ctrl, ACC_CFG_CO, 32'd`CO);                 // CO = 0 >> CFG_CI = 8 = 8*(CI+1)
+    // blocking_write_register (krnl_acc_ctrl, ACC_INPUT_WIDTH, 32'd`IW);
+
+    blocking_write_register (krnl_acc_ctrl, ACC_IFM_SIZE, ifm_size[31:0]);                 // ifm_size 63232
+    blocking_write_register (krnl_acc_ctrl, ACC_WGT_SIZE, wgt_size[31:0]);                 // wgt_size 53248
+
 
     // fill input buffer memory with plain data
     in_buffer_fill_memory(ifm_buffer, IN_BUFFER_BASE0, ifm_data, 0, `IFM_LEN_WORD*`GROUP_NUM);   

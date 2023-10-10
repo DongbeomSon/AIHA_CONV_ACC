@@ -38,6 +38,9 @@ module krnl_acc_axi_ctrl_slave  (
 
     output [31:0] cfg_ci,
     output [31:0] cfg_co,
+    // output [31:0] input_width,
+    output [31:0] ifm_size,
+    output [31:0] wgt_size,
     output [63:0] ifm_addr_base,
     output [63:0] wgt_addr_base,
     output [63:0] ofm_addr_base
@@ -59,13 +62,17 @@ localparam
     // register address map
     ADDR_CTRL       = 12'h000, 
     ADDR_CFG_CI     = 12'h010, 
-    ADDR_CFG_CO     = 12'h018,
+    ADDR_CFG_CO     = 12'h014,
+    ADDR_IFM_SIZE   = 12'h018,
+    ADDR_WGT_SIZE   = 12'h01C,
+    // ADDR_INPUT_WIDTH = 12'h01C,
     ADDR_IFM_ADDR_BASE_0 = 12'h020,
     ADDR_IFM_ADDR_BASE_1 = 12'h024,
     ADDR_WGT_ADDR_BASE_0 = 12'h028,
     ADDR_WGT_ADDR_BASE_1 = 12'h02C,
     ADDR_OFM_ADDR_BASE_0 = 12'h030,
     ADDR_OFM_ADDR_BASE_1 = 12'h034,
+
     
     // registers write state machine
     WRIDLE          = 2'd0,
@@ -101,6 +108,9 @@ localparam
     
     reg  [31:0]     reg_cfg_ci;               // bit[0] used
     reg  [31:0]     reg_cfg_co;
+    // reg  [31:0]     reg_input_width;
+    reg  [31:0]     reg_ifm_size;
+    reg  [31:0]     reg_wgt_size;
     reg  [63:0]     reg_ifm_addr_base;
     reg  [63:0]     reg_wgt_addr_base;
     reg  [63:0]     reg_ofm_addr_base;
@@ -208,6 +218,15 @@ localparam
                 ADDR_CFG_CO: begin
                     rdata <= reg_cfg_co;
                 end
+                // ADDR_INPUT_WIDTH: begin
+                //     rdata <= reg_input_width;
+                // end
+                ADDR_IFM_SIZE: begin
+                    rdata <= reg_ifm_size;
+                end
+                ADDR_WGT_SIZE: begin
+                    rdata <= reg_wgt_size;
+                end
                 // --------------------------------------
                 ADDR_IFM_ADDR_BASE_0: begin
                     rdata <= reg_ifm_addr_base[31:0];
@@ -293,6 +312,33 @@ localparam
                 reg_cfg_co <= (WDATA & wmask) | (reg_cfg_co & ~wmask);
     end
 
+    // // reg_input_width
+    // always @(posedge ACLK) begin
+    //     if (!ARESETn)
+    //         reg_input_width <= 'h0;
+    //     else
+    //         if (w_hs && waddr == ADDR_INPUT_WIDTH)
+    //             reg_input_width <= (WDATA & wmask) | (reg_input_width & ~wmask);
+    // end
+
+    // reg_ifm_size
+    always @(posedge ACLK) begin
+        if (!ARESETn)
+            reg_ifm_size <= 'h0;
+        else
+            if (w_hs && waddr == ADDR_IFM_SIZE)
+                reg_ifm_size <= (WDATA & wmask) | (reg_ifm_size & ~wmask);
+    end
+
+    // reg_wgt_size
+    always @(posedge ACLK) begin
+        if (!ARESETn)
+            reg_wgt_size <= 'h0;
+        else
+            if (w_hs && waddr == ADDR_WGT_SIZE)
+                reg_wgt_size <= (WDATA & wmask) | (reg_wgt_size & ~wmask);
+    end
+
     // reg_ifm_addr_base [31:0]
     always @(posedge ACLK) begin
         if (!ARESETn)
@@ -352,6 +398,9 @@ localparam
     assign ap_continue  = reg_ctrl_ap_continue;
     assign cfg_ci       = reg_cfg_ci; 
     assign cfg_co       = reg_cfg_co;
+    // assign input_width  = reg_input_width;
+    assign ifm_size     = reg_ifm_size;
+    assign wgt_size     = reg_wgt_size;
     assign ifm_addr_base     = reg_ifm_addr_base;
     assign wgt_addr_base    = reg_wgt_addr_base;
     assign ofm_addr_base    = reg_ofm_addr_base;

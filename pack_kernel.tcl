@@ -38,9 +38,15 @@ add_files -norecurse \
                             ../rtl_acc/conv_engine.v \
        }
 
+# create_ip -name ila -vendor xilinx.com -library ip -version 6.2 -module_name ila_0
+# set_property -dict [list CONFIG.C_PROBE6_WIDTH {32} CONFIG.C_PROBE5_WIDTH {64} CONFIG.C_PROBE4_WIDTH {64} CONFIG.C_PROBE3_WIDTH {64} \
+# CONFIG.C_NUM_OF_PROBES {7} CONFIG.C_EN_STRG_QUAL {1} CONFIG.C_INPUT_PIPE_STAGES {2} \
+# CONFIG.C_ADV_TRIGGER {true} CONFIG.ALL_PROBE_SAME_MU_CNT {4}] [get_ips ila_0]
 create_ip -name ila -vendor xilinx.com -library ip -version 6.2 -module_name ila_0
-set_property -dict [list CONFIG.C_PROBE5_WIDTH {64} CONFIG.C_PROBE4_WIDTH {64} CONFIG.C_PROBE3_WIDTH {64} \
-CONFIG.C_NUM_OF_PROBES {6} CONFIG.C_EN_STRG_QUAL {1} CONFIG.C_INPUT_PIPE_STAGES {2} \
+set_property -dict [list CONFIG.C_PROBE13_WIDTH {512} CONFIG.C_PROBE12_WIDTH {512} \
+CONFIG.C_PROBE9_WIDTH {64} CONFIG.C_PROBE8_WIDTH {64} CONFIG.C_PROBE7_WIDTH {64}\
+CONFIG.C_PROBE3_WIDTH {64} CONFIG.C_PROBE2_WIDTH {64} CONFIG.C_PROBE1_WIDTH {64}\
+CONFIG.C_NUM_OF_PROBES {14} CONFIG.C_EN_STRG_QUAL {1} CONFIG.C_INPUT_PIPE_STAGES {2} \
 CONFIG.C_ADV_TRIGGER {true} CONFIG.ALL_PROBE_SAME_MU_CNT {4}] [get_ips ila_0]
 
 # create_ip -name ila -vendor xilinx.com -library ip -version 6.2 -module_name ila_1
@@ -76,6 +82,9 @@ ipx::associate_bus_interfaces -clock ap_clk -reset ap_rst_n [ipx::current_core]
 ipx::add_register CTRL         [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]
 ipx::add_register CFG_CI         [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]
 ipx::add_register CFG_CO     [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]
+# ipx::add_register INPUT_WIDTH     [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]
+ipx::add_register IFM_SIZE     [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]
+ipx::add_register WGT_SIZE     [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]
 ipx::add_register IFM_ADDR_BASE        [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]
 ipx::add_register WGT_ADDR_BASE        [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]
 ipx::add_register OFM_ADDR_BASE        [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]
@@ -91,8 +100,21 @@ set_property address_offset {0x010}             [ipx::get_registers CFG_CI    -o
 set_property size           {32}                [ipx::get_registers CFG_CI    -of_objects [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]]
 
 set_property description    {parameter CO}      [ipx::get_registers CFG_CO -of_objects [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]]
-set_property address_offset {0x018}             [ipx::get_registers CFG_CO -of_objects [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]]
+set_property address_offset {0x014}             [ipx::get_registers CFG_CO -of_objects [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]]
 set_property size           {32}                [ipx::get_registers CFG_CO -of_objects [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]]
+
+# set_property description    {parameter INPUT_WIDTH}      [ipx::get_registers INPUT_WIDTH -of_objects [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]]
+# set_property address_offset {0x01C}             [ipx::get_registers INPUT_WIDTH -of_objects [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]]
+# set_property size           {32}                [ipx::get_registers INPUT_WIDTH -of_objects [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]]
+
+set_property description    {parameter IFM_SIZE}      [ipx::get_registers IFM_SIZE -of_objects [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]]
+set_property address_offset {0x018}             [ipx::get_registers IFM_SIZE -of_objects [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]]
+set_property size           {32}                [ipx::get_registers IFM_SIZE -of_objects [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]]
+
+set_property description    {parameter WGT_SIZE}      [ipx::get_registers WGT_SIZE -of_objects [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]]
+set_property address_offset {0x01C}             [ipx::get_registers WGT_SIZE -of_objects [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]]
+set_property size           {32}                [ipx::get_registers WGT_SIZE -of_objects [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]]
+
 
 set_property description    {ifm addr} [ipx::get_registers IFM_ADDR_BASE  -of_objects [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]]
 set_property address_offset {0x020}             [ipx::get_registers IFM_ADDR_BASE  -of_objects [ipx::get_address_blocks reg0 -of_objects [ipx::get_memory_maps s_axi_control -of_objects [ipx::current_core]]]]

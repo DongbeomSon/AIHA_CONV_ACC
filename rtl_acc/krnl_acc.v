@@ -144,6 +144,9 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
   wire [C_M_AXI_ADDR_WIDTH-1:0]           ofm_addr_base;
   wire [31:0]                             cfg_ci;
   wire [31:0]                             cfg_co;
+  // wire [31:0]                             input_width;
+  wire [31:0]                             ifm_size;
+  wire [31:0]                             wgt_size;
 
   wire  ap_start;
   wire  ap_done;
@@ -151,39 +154,55 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
   wire  ap_ready;
   wire  ap_continue;
 
-  reg [C_M_AXI_ADDR_WIDTH-1:0]           r_ifm_addr_base;
-  reg [C_M_AXI_ADDR_WIDTH-1:0]           r_wgt_addr_base;
-  reg [C_M_AXI_ADDR_WIDTH-1:0]           r_ofm_addr_base;
-  reg [31:0]                            r_cfg_ci;
-  reg [31:0]                            r_cfg_co;
+  // reg [C_M_AXI_ADDR_WIDTH-1:0]           r_ifm_addr_base;
+  // reg [C_M_AXI_ADDR_WIDTH-1:0]           r_wgt_addr_base;
+  // reg [C_M_AXI_ADDR_WIDTH-1:0]           r_ofm_addr_base;
+  // reg [31:0]                            r_cfg_ci;
+  // reg [31:0]                            r_cfg_co;
+  // // reg [31:0]                            r_input_width;
+  // reg [31:0]                             r_ifm_size;
+  // reg [31:0]                             r_wgt_size;
 
   wire [C_M_AXI_ADDR_WIDTH-1:0]           t_ifm_addr_base;
   wire [C_M_AXI_ADDR_WIDTH-1:0]           t_wgt_addr_base;
   wire [C_M_AXI_ADDR_WIDTH-1:0]           t_ofm_addr_base;
   wire [31:0]                             t_cfg_ci;
   wire [31:0]                             t_cfg_co;
+  // wire [31:0]                             t_input_width;
+  wire [31:0]                             t_ifm_size;
+  wire [31:0]                             t_wgt_size;
 
-  assign ifm_addr_base = r_ifm_addr_base;
-  assign wgt_addr_base = r_wgt_addr_base;
-  assign ofm_addr_base = r_ofm_addr_base;
-  assign cfg_ci = r_cfg_ci;
-  assign cfg_co = r_cfg_co;
+  // assign ifm_addr_base = r_ifm_addr_base;
+  // assign wgt_addr_base = r_wgt_addr_base;
+  // assign ofm_addr_base = r_ofm_addr_base;
+  // assign cfg_ci = r_cfg_ci;
+  // assign cfg_co = r_cfg_co;
+  // // assign input_width = r_input_width;
+  // assign ifm_size = r_ifm_size;
+  // assign wgt_size = r_wgt_size;
 
-  always @(posedge ap_clk, negedge ap_rst_n) begin
-    if(!ap_rst_n) begin
-      r_ifm_addr_base <= 0;
-      r_wgt_addr_base <= 0;
-      r_ofm_addr_base <= 0;
-    end else begin
-      if(ap_start & ap_ready) begin
-        r_ifm_addr_base <= t_ifm_addr_base;
-        r_wgt_addr_base <= t_wgt_addr_base;
-        r_ofm_addr_base <= t_ofm_addr_base;
-        r_cfg_ci <= t_cfg_ci;
-        r_cfg_co <= t_cfg_co;
-      end
-    end
-  end
+  wire op_start;
+  wire write_buffer_wait;
+
+  // always @(posedge ap_clk, negedge ap_rst_n) begin
+  //   if(!ap_rst_n) begin
+  //     r_ifm_addr_base <= 0;
+  //     r_wgt_addr_base <= 0;
+  //     r_ofm_addr_base <= 0;
+  //   end else begin
+  //    if(ap_start & ap_ready) begin
+  //     // if(op_start) begin
+  //       r_ifm_addr_base <= t_ifm_addr_base;
+  //       r_wgt_addr_base <= t_wgt_addr_base;
+  //       r_ofm_addr_base <= t_ofm_addr_base;
+  //       r_cfg_ci <= t_cfg_ci;
+  //       r_cfg_co <= t_cfg_co;
+  //       // r_input_width <= t_input_width;
+  //       r_ifm_size <= t_ifm_size;
+  //       r_wgt_size <= t_wgt_size;
+  //     end
+  //   end
+  // end
 
   krnl_acc_axi_ctrl_slave  u_krnl_cbc_axi_ctrl_slave (
     .ACLK           (ap_clk),     
@@ -215,6 +234,9 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
 
     .cfg_ci           (t_cfg_ci),
     .cfg_co       (t_cfg_co),
+    // .input_width (t_input_width),
+    .ifm_size     (t_ifm_size),
+    .wgt_size     (t_wgt_size),
     .ifm_addr_base      (t_ifm_addr_base),
     .wgt_addr_base      (t_wgt_addr_base),
     .ofm_addr_base      (t_ofm_addr_base)
@@ -403,8 +425,6 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     endgenerate
 
 
-    wire op_start;
-    wire write_buffer_wait;
 // instantiation of engine control
   acc_eng_ctrl u_engine_control (
     .clk                       (ap_clk),
@@ -435,8 +455,12 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .write_addr               (ofm_addr_base),
 
 
-    .cfg_ci                   (cfg_ci),
-    .cfg_co                   (cfg_co),
+    .cfg_ci                   (t_cfg_ci),
+    .cfg_co                   (t_cfg_co),
+
+    // .input_width              (input_width),
+    .ifm_size                 (t_ifm_size),
+    .wgt_size                 (t_wgt_size),
 
 
     .axis_slv_ifm_tvalid    (ifm_axis_tvalid),
@@ -452,19 +476,19 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .axis_mst_ofm_tready    (ofm_axis_tready),
 
     .ofm_req (ofm_start),
-    .ofm_addr_base(ofm_addr_base),
+    .ofm_addr_base(t_ofm_addr_base),
     .ofm_done (ofm_done),
     .ofm_offset(ofm_addr_offset),
     .ofm_xfer_size(ofm_xfer_size),
 
     .ifm_req (ifm_start),
-    .ifm_addr_base(ifm_addr_base),
+    .ifm_addr_base(t_ifm_addr_base),
     .ifm_done (ifm_done),
     .ifm_offset(ifm_addr_offset),
     .ifm_xfer_size(ifm_xfer_size),
 
     .wgt_req (wgt_start),
-    .wgt_addr_base(wgt_addr_base),
+    .wgt_addr_base(t_wgt_addr_base),
     .wgt_done (wgt_done),
     .wgt_offset(wgt_addr_offset),
     .wgt_xfer_size(wgt_xfer_size),
@@ -524,14 +548,11 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
 	// // ILA monitoring combinatorial adder
 	// ila_0 i_ila_0 (
 	// 	.clk(ap_clk),              // input wire        clk
-	// 	.probe0(r_read),           // input wire [0:0]  probe0  
-	// 	.probe1(r_wgt), // input wire [0:0]  probe1 
-	// 	.probe2(r_write),   // input wire [0:0]  probe2 
-	// 	.probe3(r_engine),    // input wire [0:0] probe3 
-	// 	.probe4(read_cycle),     // input wire [31:0]  probe4 
-	// 	.probe5(wgt_cycle),   // input wire [31:0]  probe5 
-	// 	.probe6(write_cycle),       // input wire [31:0] probe6
-  // 	.probe7(engine_counter),     // input wire [31:0]  probe7 
-	// 	.probe8(cycle_counter)   // input wire [31:0]  probe8 
+	// 	.probe0(op_start),           // input wire [0:0]  probe0  
+	// 	.probe1(ap_start), // input wire [0:0]  probe1 
+	// 	.probe2(ap_ready),   // input wire [0:0]  probe2 
+	// 	.probe3(ifm_addr_base),    // input wire [63:0] probe3 
+	// 	.probe4(wgt_addr_base),    // input wire [63:0] probe3 
+  //   .probe5(t_ifm_addr_base)      // input wire [63:0] probe4
 	// );
 endmodule

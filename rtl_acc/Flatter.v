@@ -6,6 +6,8 @@ module flatter #(
     input rst_n,
     input stall,
 
+    input op_start,
+
     input ofm_port0_v,
     input ofm_port1_v,
 
@@ -23,7 +25,8 @@ module flatter #(
     output wmst_req,
     output reg [63:0] wmst_addr,
     output reg [63:0] wmst_xfer_size,
-    output write_buffer_wait
+    output write_buffer_wait,
+    output wmst_wstrb
 );
 
     reg [4:0] cnt;
@@ -80,22 +83,22 @@ module flatter #(
     reg flag_wmst_req;
     assign wmst_req = r_wmst_req;
 
-
+    // address alignment
+    wire [63:0] addr_base = {wmst_offset[63:12], 12'b0};
+    reg [11:0] addr_waste;
     reg [31:0] addr_cnt;
+    reg [5:0] addr_waste_num;
+    reg [5:0] addr_waste_cnt;
 
     always @(*) begin
-        wmst_addr = wmst_offset + addr_cnt * WORD_BYTE; // 64 byte = 512bit
+        addr_waste = wmst_offset[11:0];
+        addr_waste_num = addr_waste / 64;
+        wmst_addr = wmst_offset + addr_cnt * WORD_BYTE; // 64 byte = 512bit //addr_base -> addr_waste;
         wmst_xfer_size = WORD_BYTE * 2; //addr_cnt_temp * WORD_BYTE;
     end
 
 
-    // always @(posedge clk, negedge rst_n) begin
-    //     if(!rst_n) begin
-    //         addr_cnt <= 0;
-    //     end else begin
-    //         addr_cnt <= start_conv ? 0 : out_fifo_pop_req ? addr_cnt + 1 : addr_cnt;
-    //     end
-    // end
+
     reg r_end_conv;
     always @(posedge clk, negedge rst_n) begin
         if(!rst_n) begin
@@ -170,8 +173,6 @@ module flatter #(
     end
 
 
-//for debug
-
     reg [31:0] p_ofm0 [0:15];
     reg [31:0] p_ofm1 [0:15];
     integer i;
@@ -182,6 +183,8 @@ module flatter #(
         end
     end
 
+
+//for debug
     reg [31:0] wmst_done_counter;
 
     always @(posedge clk, negedge rst_n) begin
