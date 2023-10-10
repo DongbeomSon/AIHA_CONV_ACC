@@ -48,6 +48,8 @@ GROUP_NUM := 1
 
 V_MODE := hw
 
+CI := 0
+CO := 0
 
 .phony: clean traces
 
@@ -60,13 +62,13 @@ pack_kernel:
 	rm -rf vivado_pack_krnl_project; mkdir vivado_pack_krnl_project; cd vivado_pack_krnl_project; vivado -mode batch -source ../pack_kernel.tcl -tclargs $(PART)
 
 runsim:
-	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM);
-	./runsim_krnl_xsim.sh $(GROUP_NUM);
+	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM) $(CI) $(CO);
+	./runsim_krnl_xsim.sh $(GROUP_NUM) $(CI) $(CO);
 #	cd data; python3 ../script/compare.py;
 #	cp ./script/compare.py ./data/t1/compare.py; cp ./script/compare.py ./data/t2/compare.py; cd data/t1; python3 ./compare.py; cd ..; cd t2; python3 ./compare.py;
 
 gen_tb:
-	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM);
+	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM) $(CI) $(CO);
 #	rm ./data/*.txt; cd data; python3 testbench_gen.py
 
 validate:
