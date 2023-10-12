@@ -1,8 +1,9 @@
 `timescale 1ns/1ps
 
-module WGT_BUF (clk, rst_n, wgt_input, wgt_read, wgt_buf0, wgt_buf1, wgt_buf2, wgt_buf3);
+module WGT_BUF (clk, stall, rst_n, wgt_input, wgt_read, wgt_buf0, wgt_buf1, wgt_buf2, wgt_buf3);
 
 input clk;
+input stall;
 input rst_n;
 input signed [7:0] wgt_input;
 input wgt_read;
@@ -26,19 +27,21 @@ always @(posedge clk or negedge rst_n)
     end
     else
     begin
-        if(wgt_read)
-        begin
-            wgt_buf[3] <= wgt_buf[2];
-            wgt_buf[2] <= wgt_buf[1];
-            wgt_buf[1] <= wgt_buf[0];
-            wgt_buf[0] <= wgt_input;
-        end
-        else
-        begin
-            wgt_buf[3] <= wgt_buf[3];
-            wgt_buf[2] <= wgt_buf[2];
-            wgt_buf[1] <= wgt_buf[1];
-            wgt_buf[0] <= wgt_buf[0];
+        if(!stall) begin
+            if(wgt_read)
+            begin
+                wgt_buf[3] <= wgt_buf[2];
+                wgt_buf[2] <= wgt_buf[1];
+                wgt_buf[1] <= wgt_buf[0];
+                wgt_buf[0] <= wgt_input;
+            end
+            else
+            begin
+                wgt_buf[3] <= wgt_buf[3];
+                wgt_buf[2] <= wgt_buf[2];
+                wgt_buf[1] <= wgt_buf[1];
+                wgt_buf[0] <= wgt_buf[0];
+            end
         end
     end
 

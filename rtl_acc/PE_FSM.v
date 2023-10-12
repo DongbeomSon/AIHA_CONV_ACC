@@ -1,15 +1,16 @@
 `timescale 1ns/1ps
 
-module PE_FSM (clk, rst_n, start_conv, start_again, cfg_ci, cfg_co, 
+module PE_FSM (clk, stall, rst_n, start_conv, start_again, cfg_ci, cfg_co, 
             ifm_read, wgt_read, p_valid_output, last_chanel_output, end_conv
 );
 
 input clk;
+input stall;
 input rst_n;
 input start_conv;
 input start_again;
-input [1:0] cfg_ci;
-input [1:0] cfg_co;
+input [31:0] cfg_ci;
+input [31:0] cfg_co;
 output ifm_read;
 output wgt_read;
 output p_valid_output;
@@ -17,12 +18,20 @@ output last_chanel_output;
 output end_conv;
 
 
-reg [5:0] ci;
-reg [5:0] co;
+// reg [5:0] ci;
+// reg [5:0] co;
 
-reg [5:0] cnt1;
-reg [8:0] cnt2;
-reg [8:0] cnt3;
+// reg [5:0] cnt1;
+// reg [8:0] cnt2;
+// reg [8:0] cnt3;
+
+reg [31:0] ci;
+reg [31:0] co;
+
+reg [4:0] cnt1;
+reg [9:0] cnt2;
+reg [31:0] cnt3;
+
 
 
 reg [2:0] current_state;
@@ -46,15 +55,17 @@ always @ (posedge clk or negedge rst_n)
     if(!rst_n)
         current_state <= IDLE;
     else
-        current_state <= next_state; 
+        current_state <= stall ? current_state : next_state; 
 
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         ci <= 0;
         co <= 0;
     end else if(start_conv) begin
-        ci <= ((cfg_ci + 6'b000001) << 3);
-        co <= ((cfg_co + 6'b000001) << 3);
+        // ci <= ((cfg_ci + 6'b000001) << 3);
+        // co <= ((cfg_co + 6'b000001) << 3);
+        ci <= ((cfg_ci + 1) << 3);
+        co <= ((cfg_co + 1) << 3);
     end
 end
 
@@ -90,26 +101,28 @@ always @ (posedge clk or negedge rst_n)
         {ifm_read, wgt_read, p_valid, last_chanel, end_conv} <= 5'b00000;
     else
         begin
-            {ifm_read, wgt_read, p_valid, last_chanel, end_conv} <= 5'b00000;
-            case(next_state)
-                IDLE:
-                    {ifm_read, wgt_read, p_valid, last_chanel, end_conv} <= 5'b00000;
-                S1: 
-                begin
-                    {ifm_read, wgt_read, end_conv} <= 3'b110;
-                    p_valid <= (cnt1 < 3) ? 0 : 1; 
-                    last_chanel <= (cnt1 == 3 && cnt2 == 0) ? 1 : 0; 
-                end
-                S2:
+            if(!stall) begin
+                {ifm_read, wgt_read, p_valid, last_chanel, end_conv} <= 5'b00000;
+                case(next_state)
+                    IDLE:
+                        {ifm_read, wgt_read, p_valid, last_chanel, end_conv} <= 5'b00000;
+                    S1: 
                     begin
-                        {ifm_read, wgt_read, p_valid, end_conv} <= 4'b1010; 
-                        last_chanel <= (cnt2 == 0) ? 1 : 0;               
+                        {ifm_read, wgt_read, end_conv} <= 3'b110;
+                        p_valid <= (cnt1 < 3) ? 0 : 1; 
+                        last_chanel <= (cnt1 == 3 && cnt2 == 0) ? 1 : 0; 
                     end
-                FINISH:
-                    {ifm_read, wgt_read, p_valid, last_chanel, end_conv} <= 5'b00001;           
-                default:
-                    {ifm_read, wgt_read, p_valid, last_chanel, end_conv} <= 5'b00000;
-            endcase
+                    S2:
+                        begin
+                            {ifm_read, wgt_read, p_valid, end_conv} <= 4'b1010; 
+                            last_chanel <= (cnt2 == 0) ? 1 : 0;               
+                        end
+                    FINISH:
+                        {ifm_read, wgt_read, p_valid, last_chanel, end_conv} <= 5'b00001;           
+                    default:
+                        {ifm_read, wgt_read, p_valid, last_chanel, end_conv} <= 5'b00000;
+                endcase
+            end
         end
 
 
@@ -123,36 +136,37 @@ always @ (posedge clk or negedge rst_n)
         end
     else
         begin
-            if(next_state == FINISH) begin
-                cnt3 <= 0;
-                cnt2 <= 0;
-                cnt1 <= 0;
-            end else if(next_state == IDLE)
-                cnt1 <= 0;
-            else begin
-                if (cnt1 == tile_length + 2)
+            if(!stall) begin
+                if(next_state == FINISH) begin
+                    cnt3 <= 0;
+                    cnt2 <= 0;
                     cnt1 <= 0;
-                else      
-                    cnt1 <= cnt1 + 1;
+                end else if(next_state == IDLE)
+                    cnt1 <= 0;
+                else begin
+                    if (cnt1 == tile_length + 2)
+                        cnt1 <= 0;
+                    else      
+                        cnt1 <= cnt1 + 1;
 
-                if(cnt1 == 0) begin                     
-                    if(cnt2 == ci-1)
-                        cnt2 <= 0;
-                    else
-                        cnt2 <= cnt2 + 1;
-
-                    if(cnt2 == 0)
-                        if(cnt3 == co*52)
-                            cnt3 <= 0;
+                    if(cnt1 == 0) begin                     
+                        if(cnt2 == ci-1)
+                            cnt2 <= 0;
                         else
-                            cnt3 <= cnt3 + 1;
-                    else 
-                        cnt3 <= cnt3;
-                end
-                else
-                    cnt2 <= cnt2;
-                end
-            
+                            cnt2 <= cnt2 + 1;
+
+                        if(cnt2 == 0)
+                            if(cnt3 == co*52)
+                                cnt3 <= 0;
+                            else
+                                cnt3 <= cnt3 + 1;
+                        else 
+                            cnt3 <= cnt3;
+                    end
+                    else
+                        cnt2 <= cnt2;
+                    end
+            end
 
         end
 
@@ -171,14 +185,16 @@ always @(posedge clk or negedge rst_n)
         last_chanel_i[1]   <= 0;
         last_chanel_i[0]   <= 0;
     end else begin
-        p_valid_output     <= p_valid_i[2];
-        p_valid_i[2]       <= p_valid_i[1];
-        p_valid_i[1]       <= p_valid_i[0];
-        p_valid_i[0]       <= p_valid;
-        last_chanel_output <= last_chanel_i[2]; 
-        last_chanel_i[2]   <= last_chanel_i[1];
-        last_chanel_i[1]   <= last_chanel_i[0];
-        last_chanel_i[0]   <= last_chanel;
+        if(!stall) begin
+            p_valid_output     <= p_valid_i[2];
+            p_valid_i[2]       <= p_valid_i[1];
+            p_valid_i[1]       <= p_valid_i[0];
+            p_valid_i[0]       <= p_valid;
+            last_chanel_output <= last_chanel_i[2]; 
+            last_chanel_i[2]   <= last_chanel_i[1];
+            last_chanel_i[1]   <= last_chanel_i[0];
+            last_chanel_i[0]   <= last_chanel;
+        end
     end
 
 

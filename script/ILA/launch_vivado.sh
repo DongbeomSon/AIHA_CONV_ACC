@@ -1,0 +1,1 @@
+debug_hw --vivado --host casper --ltx_file ./_x/link/vivado/vpl/prj/prj.runs/impl_1/debug_nets.ltx &

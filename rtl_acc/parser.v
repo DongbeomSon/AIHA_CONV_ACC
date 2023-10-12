@@ -11,7 +11,10 @@ module parser #(
 //    input init_word, //first hand_shake of axis after conv_start assert
 
     output [OUTPUT_WIDTH-1:0] parse_out,
-    output reg input_req
+    output reg input_req,
+
+
+    input stall
 );
     reg [5:0] cnt;
 
@@ -37,7 +40,7 @@ module parser #(
 //            r_parse_out <= 0;
             cnt <= 0;
         end else begin
-            if (ifm_read) begin
+            if (ifm_read & !stall) begin
                 input_req <= (cnt == MAX_CNT - 2) ? 1 : 0;
                 cnt <= (cnt == MAX_CNT-1) ? 0 : cnt + 1;
             end

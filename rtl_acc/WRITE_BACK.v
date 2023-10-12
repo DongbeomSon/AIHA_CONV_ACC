@@ -8,6 +8,7 @@ module WRITE_BACK #(
     parameter depth = 61
 ) (
     input  clk,
+    input  stall,
     input  rst_n,
     input  start_init,
     input  p_filter_end,
@@ -66,7 +67,7 @@ module WRITE_BACK #(
         if (!rst_n)
             st_cur <= IDLE;
         else 
-            st_cur <= st_next;
+            st_cur <= !stall ? st_next : st_cur;
     end
     /// Next state logic
     always @(*) begin
@@ -147,10 +148,12 @@ module WRITE_BACK #(
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n)
             start_conv_r <= 0;
-        else if (st_cur == START_CONV || st_cur == CLEAR_CNT)
-            start_conv_r <= 1;
-        else
-            start_conv_r <= 0;
+        else if(!stall) begin
+            if (st_cur == START_CONV || st_cur == CLEAR_CNT)
+                start_conv_r <= 1;
+            else
+                start_conv_r <= 0;
+        end
     end
     assign start_conv = start_conv_r;
     /// PingPong buffer controller signal
@@ -158,10 +161,12 @@ module WRITE_BACK #(
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n)
             odd_cnt_r <= 0;
-        else if (st_cur == CLEAR_CNT)
-            odd_cnt_r <= ~odd_cnt;
-        else
-            odd_cnt_r <= odd_cnt;
+        else if(!stall) begin
+            if (st_cur == CLEAR_CNT)
+                odd_cnt_r <= ~odd_cnt;
+            else
+                odd_cnt_r <= odd_cnt;
+        end
     end
     assign odd_cnt = odd_cnt_r;
     /// Output zero flag signals
@@ -169,33 +174,39 @@ module WRITE_BACK #(
         if (!rst_n) begin
             p_write_zero0_r <= 0;
             p_write_zero1_r <= 0;
-        end else if (st_cur == ROW_0_1) begin
-            p_write_zero0_r <= 1;  
-            p_write_zero1_r <= 1;
-        end else begin
-            p_write_zero0_r <= 0;
-            p_write_zero1_r <= 0;
+        end else if(!stall) begin
+            if (st_cur == ROW_0_1) begin
+                p_write_zero0_r <= 1;  
+                p_write_zero1_r <= 1;
+            end else begin
+                p_write_zero0_r <= 0;
+                p_write_zero1_r <= 0;
+            end
         end
     end
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             p_write_zero2_r <= 0;
             p_write_zero3_r <= 0;
-        end else if (st_cur == ROW_2_3) begin
-            p_write_zero2_r <= 1;  
-            p_write_zero3_r <= 1;
-        end else begin
-            p_write_zero2_r <= 0;
-            p_write_zero3_r <= 0;
+        end else if(!stall) begin
+            if (st_cur == ROW_2_3) begin
+                p_write_zero2_r <= 1;  
+                p_write_zero3_r <= 1;
+            end else begin
+                p_write_zero2_r <= 0;
+                p_write_zero3_r <= 0;
+            end
         end
     end
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             p_write_zero4_r <= 0;
-        end else if (st_cur == ROW_5) begin
-            p_write_zero4_r <= 1;  
-        end else begin
-            p_write_zero4_r <= 0;
+        end else if(!stall) begin
+            if (st_cur == ROW_5) begin
+                p_write_zero4_r <= 1;  
+            end else begin
+                p_write_zero4_r <= 0;
+            end
         end
     end
     assign p_write_zero0 = p_write_zero0_r;
@@ -208,21 +219,25 @@ module WRITE_BACK #(
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n)
             p_init_r <= 0;
-        else if (st_cur == INIT_BUFF)
-            p_init_r <= 1;
-        else
-            p_init_r <= 0;
+        else if(!stall) begin
+            if (st_cur == INIT_BUFF)
+                p_init_r <= 1;
+            else
+                p_init_r <= 0;
+        end
     end
     assign p_init = p_init_r;
     /// Update the cnt
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n)
             cnt <= 0;
-        else if (st_cur == IDLE || st_cur == CLEAR_0_1  || st_cur == CLEAR_START_CONV
-            || st_cur == CLEAR_2_3 || st_cur == CLEAR_CNT || st_cur == FINISH)
-            cnt <= 0;
-        else 
-            cnt <= cnt + 1;
+        else if(!stall) begin
+            if (st_cur == IDLE || st_cur == CLEAR_0_1  || st_cur == CLEAR_START_CONV
+                || st_cur == CLEAR_2_3 || st_cur == CLEAR_CNT || st_cur == FINISH)
+                cnt <= 0;
+            else 
+                cnt <= cnt + 1;
+        end
     end
 
 
@@ -233,16 +248,19 @@ module WRITE_BACK #(
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n)
             r_end_op <= 0;
-        else r_end_op <= st_cur == END_CONV ? 1 : 0;
+        else if(!stall)
+            r_end_op <= st_cur == END_CONV ? 1 : 0;
     end
 
     // end_conv registering
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n)
             r_end_conv <= 0;
-        else if (st_cur == FINISH)
-            r_end_conv <= 0;
-        else r_end_conv <= r_end_conv ? 1 : end_conv;
+        else if(!stall) begin
+            if (st_cur == FINISH)
+                r_end_conv <= 0;
+            else r_end_conv <= r_end_conv ? 1 : end_conv;
+        end
     end
 
     /// Final result, a big mux
@@ -252,33 +270,35 @@ module WRITE_BACK #(
             out_port1_r <= 0;
             port0_valid_r <= 0;
             port1_valid_r <= 0;
-        end else begin
-            case({row0_valid, row1_valid, row2_valid, row3_valid, row4_valid})
-                5'b11000 : begin
-                    out_port0_r <= row0;
-                    out_port1_r <= row1;
-                    port0_valid_r <= row0_valid;
-                    port1_valid_r <= row1_valid;
-                end
-                5'b00110 : begin
-                    out_port0_r <= row2;
-                    out_port1_r <= row3;
-                    port0_valid_r <= row2_valid;
-                    port1_valid_r <= row3_valid;
-                end
-                5'b00001 : begin
-                    out_port0_r <= row4;
-                    out_port1_r <= 0;
-                    port0_valid_r <= row4_valid;
-                    port1_valid_r <= 0;
-                end
-                default : begin
-                    out_port0_r <= 0;
-                    out_port1_r <= 0;
-                    port0_valid_r <= 0;
-                    port1_valid_r <= 0;
-                end    
-            endcase
+        end else if(!stall) begin
+            begin
+                case({row0_valid, row1_valid, row2_valid, row3_valid, row4_valid})
+                    5'b11000 : begin
+                        out_port0_r <= row0;
+                        out_port1_r <= row1;
+                        port0_valid_r <= row0_valid;
+                        port1_valid_r <= row1_valid;
+                    end
+                    5'b00110 : begin
+                        out_port0_r <= row2;
+                        out_port1_r <= row3;
+                        port0_valid_r <= row2_valid;
+                        port1_valid_r <= row3_valid;
+                    end
+                    5'b00001 : begin
+                        out_port0_r <= row4;
+                        out_port1_r <= 0;
+                        port0_valid_r <= row4_valid;
+                        port1_valid_r <= 0;
+                    end
+                    default : begin
+                        out_port0_r <= 0;
+                        out_port1_r <= 0;
+                        port0_valid_r <= 0;
+                        port1_valid_r <= 0;
+                    end    
+                endcase
+            end
         end
     end
     assign out_port0 = out_port0_r;

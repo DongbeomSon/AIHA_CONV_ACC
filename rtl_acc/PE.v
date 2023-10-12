@@ -1,9 +1,10 @@
 `timescale 1ns/1ps
 
-module PE (clk, rst_n, ifm_input0, ifm_input1, ifm_input2, ifm_input3, 
+module PE (clk, stall, rst_n, ifm_input0, ifm_input1, ifm_input2, ifm_input3, 
             wgt_input0, wgt_input1, wgt_input2, wgt_input3, p_sum);
 
 input clk;
+input stall;
 input rst_n;
 input signed [7:0] ifm_input0;
 input signed [7:0] ifm_input1;
@@ -41,14 +42,16 @@ always @(posedge clk or negedge rst_n)
     end
     else
     begin
-        product[0] <= ifm_input0 * wgt_input0;
-        product[1] <= ifm_input1 * wgt_input1;
-        product[2] <= ifm_input2 * wgt_input2;
-        product[3] <= ifm_input3 * wgt_input3;
+        if(!stall) begin
+            product[0] <= ifm_input0 * wgt_input0;
+            product[1] <= ifm_input1 * wgt_input1;
+            product[2] <= ifm_input2 * wgt_input2;
+            product[3] <= ifm_input3 * wgt_input3;
 
-        pp_sum[0] <= product[0] + product[1];
-        pp_sum[1] <= product[2] + product[3];
-        p_sum <= pp_sum[0] + pp_sum[1];
+            pp_sum[0] <= product[0] + product[1];
+            pp_sum[1] <= product[2] + product[3];
+            p_sum <= pp_sum[0] + pp_sum[1];
+        end
     end
 
 

@@ -7,6 +7,7 @@
 ./rtl_acc/WGT_BUF.v
 ./rtl_acc/PE_FSM.v
 ./rtl_acc/CONV_ACC.v
+./rtl_acc/input_buffer.v
 
 ./rtl/axi_master_counter.sv
 ./rtl/axi_read_master.sv

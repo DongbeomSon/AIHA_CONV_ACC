@@ -9,6 +9,7 @@ module PSUM_BUFF #(
     parameter depth      = 61
 ) (
     input clk,
+    input stall,
     input rst_n,
     input p_valid_data,
     input p_write_zero,
@@ -39,7 +40,7 @@ module PSUM_BUFF #(
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n)
             d_odd_cnt <= 0;
-        else 
+        else if(!stall)
             d_odd_cnt <= odd_cnt;
     end
 
@@ -132,19 +133,20 @@ module PSUM_BUFF #(
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n)
             p_valid <= 3'b0;
-        else 
+        else if(!stall)
             p_valid <= {p_valid[1:0], p_valid_data};
     end
     /// Whether the current write zero is valid data
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n)
             p_write_zero_reg <= 1'b0;
-        else 
+        else if(!stall)
             p_write_zero_reg <= p_write_zero;
     end
     /// Adder tree
     PSUM_ADD #(.data_width(data_width)) adder_tree (
         .clk(clk),
+        .stall(stall),
         .rst_n(rst_n),
         .pe0_data(pe0_data),
         .pe1_data(pe1_data),
@@ -160,6 +162,7 @@ module PSUM_BUFF #(
         .depth(depth)
     ) synch_fifo0 (
         .clk(clk),
+        .stall(stall),
         .rd_en(fifo_rd_en0),
         .wr_en(fifo_wr_en0),
         .rst_n(rst_n),
@@ -176,6 +179,7 @@ module PSUM_BUFF #(
         .depth(depth)
     ) synch_fifo1 (
         .clk(clk),
+        .stall(stall),
         .rd_en(fifo_rd_en1),
         .wr_en(fifo_wr_en1),
         .rst_n(rst_n),
