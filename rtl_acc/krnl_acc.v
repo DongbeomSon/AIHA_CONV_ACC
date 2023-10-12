@@ -147,6 +147,7 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
   // wire [31:0]                             input_width;
   wire [31:0]                             ifm_size;
   wire [31:0]                             wgt_size;
+  wire [31:0]                             ofm_size;
 
   wire  ap_start;
   wire  ap_done;
@@ -171,6 +172,7 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
   // wire [31:0]                             t_input_width;
   wire [31:0]                             t_ifm_size;
   wire [31:0]                             t_wgt_size;
+  wire [31:0]                             t_ofm_size;
 
   // assign ifm_addr_base = r_ifm_addr_base;
   // assign wgt_addr_base = r_wgt_addr_base;
@@ -237,6 +239,7 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     // .input_width (t_input_width),
     .ifm_size     (t_ifm_size),
     .wgt_size     (t_wgt_size),
+    .ofm_size     (t_ofm_size),
     .ifm_addr_base      (t_ifm_addr_base),
     .wgt_addr_base      (t_wgt_addr_base),
     .ofm_addr_base      (t_ofm_addr_base)
@@ -258,7 +261,7 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     wire            ifm_axis_tready;
     wire            ifm_axis_tlast;
     wire    [DATA_WIDTH-1:0] ifm_axis_tdata;
-    wire    [DATA_WIDTH-1:0] ifm_axis_tdata_little_endian;
+    // wire    [DATA_WIDTH-1:0] ifm_axis_tdata_little_endian;
 
     //wgt axis interface
     wire            wgt_start;
@@ -269,7 +272,7 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     wire            wgt_axis_tready;
     wire            wgt_axis_tlast;
     wire    [DATA_WIDTH-1:0] wgt_axis_tdata;
-    wire    [DATA_WIDTH-1:0] wgt_axis_tdata_little_endian;
+    // wire    [DATA_WIDTH-1:0] wgt_axis_tdata_little_endian;
     
     //ofm axis interface
     wire            ofm_start;
@@ -279,8 +282,8 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     wire            ofm_axis_tvalid;
     wire            ofm_axis_tready;
     wire    [DATA_WIDTH-1:0] ofm_axis_tdata;
-    wire    [DATA_WIDTH-1:0] ofm_axis_tdata_little_endian;  // in global memory, data are stored in little-endian
-                                                    // so need to be reordered for AES definition
+    // wire    [DATA_WIDTH-1:0] ofm_axis_tdata_little_endian;  // in global memory, data are stored in little-endian
+    //                                                 // so need to be reordered for AES definition
 
                                         
  
@@ -363,19 +366,19 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .m_axis_tdata               (wgt_axis_tdata)
 );
     
-    // data endian conversion
-    generate
-        genvar i;
-        for (i = 0; i < WORD_BYTE; i = i + 1) begin : ifm_endian_convert
-            assign ifm_axis_tdata[i*8+7 : i*8] = ifm_axis_tdata_little_endian[(WORD_BYTE-1-i)*8+7 : (WORD_BYTE-1-i)*8];
-        end
-    endgenerate
+    // // data endian conversion
+    // generate
+    //     genvar i;
+    //     for (i = 0; i < WORD_BYTE; i = i + 1) begin : ifm_endian_convert
+    //         assign ifm_axis_tdata[i*8+7 : i*8] = ifm_axis_tdata_little_endian[(WORD_BYTE-1-i)*8+7 : (WORD_BYTE-1-i)*8];
+    //     end
+    // endgenerate
 
-    generate
-        for (i = 0; i < WORD_BYTE; i = i + 1) begin : wgt_endian_convert
-            assign wgt_axis_tdata[i*8+7 : i*8] = wgt_axis_tdata_little_endian[(WORD_BYTE-1-i)*8+7 : (WORD_BYTE-1-i)*8];
-        end
-    endgenerate
+    // generate
+    //     for (i = 0; i < WORD_BYTE; i = i + 1) begin : wgt_endian_convert
+    //         assign wgt_axis_tdata[i*8+7 : i*8] = wgt_axis_tdata_little_endian[(WORD_BYTE-1-i)*8+7 : (WORD_BYTE-1-i)*8];
+    //     end
+    // endgenerate
 
   wire [63:0] ofm_xfer_size;
   assign ofm_xfer_size_in_bytes = ofm_xfer_size;
@@ -384,7 +387,7 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .C_M_AXI_ADDR_WIDTH     (64),
     .C_M_AXI_DATA_WIDTH     (DATA_WIDTH),
     .C_XFER_SIZE_WIDTH      (WORD_BYTE),
-    .C_MAX_BURST_LENGTH     (2),           // This affect ctrl_addr_offset alignment requirement. Set to 16 means 256-bytes alignment
+    .C_MAX_BURST_LENGTH     (64),           // This affect ctrl_addr_offset alignment requirement. Set to 16 means 256-bytes alignment
     .C_INCLUDE_DATA_FIFO    (0)             // disable axi master fifo
   )
         u_ofm_write_master (
@@ -413,16 +416,16 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     .s_axis_tdata               (ofm_axis_tdata) //should be little endian
 );
 
-        // data endian conversion
-    generate
-        genvar j;
+    //     // data endian conversion
+    // generate
+    //     genvar j;
 
-        for (i = 0; i < WORD_BYTE/4; i = i+1) begin : output_endian_convert_0
-          for (j = 0; j < 4; j = j + 1) begin : output_endian_convert_1  //output 32bit
-              assign ofm_axis_tdata_little_endian[i*32 + j*8+7 : i*32 + j*8] = ofm_axis_tdata[(i+1)*32-(j+1)*8+7 : (i+1)*32-(j+1)*8];
-          end
-        end
-    endgenerate
+    //     for (i = 0; i < WORD_BYTE/4; i = i+1) begin : output_endian_convert_0
+    //       for (j = 0; j < 4; j = j + 1) begin : output_endian_convert_1  //output 32bit
+    //           assign ofm_axis_tdata_little_endian[i*32 + j*8+7 : i*32 + j*8] = ofm_axis_tdata[(i+1)*32-(j+1)*8+7 : (i+1)*32-(j+1)*8];
+    //       end
+    //     end
+    // endgenerate
 
 
 // instantiation of engine control
@@ -461,6 +464,7 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
     // .input_width              (input_width),
     .ifm_size                 (t_ifm_size),
     .wgt_size                 (t_wgt_size),
+    .ofm_size                 (t_ofm_size),
 
 
     .axis_slv_ifm_tvalid    (ifm_axis_tvalid),
@@ -498,52 +502,52 @@ parameter integer WORD_BYTE = DATA_WIDTH/8,
 );
 
 
-//cycle counter
+// //cycle counter
 
-  reg [31:0] cycle_counter;
-  reg [31:0] read_cycle;
-  reg [31:0] wgt_cycle;
-  reg [31:0] write_cycle;
-  reg [31:0] engine_counter;
-  reg r_read;
-  reg r_wgt;
-  reg r_write;
-  reg r_engine;
+//   reg [31:0] cycle_counter;
+//   reg [31:0] read_cycle;
+//   reg [31:0] wgt_cycle;
+//   reg [31:0] write_cycle;
+//   reg [31:0] engine_counter;
+//   reg r_read;
+//   reg r_wgt;
+//   reg r_write;
+//   reg r_engine;
 
-  always @(negedge ap_rst_n, posedge ap_clk) begin
-      if(!ap_rst_n) begin
-          r_read <= 0;
-          r_wgt <= 0;
-          r_write <= 0;
-          r_engine <= 0;
-      end else begin
-          r_read <= ifm_start ? 1 :
-                    ifm_done ? 0 : r_read;
-          r_write <= ofm_start ? 1 :
-                    ofm_done ? 0 : r_write;
-          r_wgt <= wgt_start ? 1 :
-                    wgt_done ? 0 : r_wgt;
-          r_engine <= op_start ? 1 :
-                    end_conv ? 0 : r_engine;
+//   always @(negedge ap_rst_n, posedge ap_clk) begin
+//       if(!ap_rst_n) begin
+//           r_read <= 0;
+//           r_wgt <= 0;
+//           r_write <= 0;
+//           r_engine <= 0;
+//       end else begin
+//           r_read <= ifm_start ? 1 :
+//                     ifm_done ? 0 : r_read;
+//           r_write <= ofm_start ? 1 :
+//                     ofm_done ? 0 : r_write;
+//           r_wgt <= wgt_start ? 1 :
+//                     wgt_done ? 0 : r_wgt;
+//           r_engine <= op_start ? 1 :
+//                     end_conv ? 0 : r_engine;
 
-      end
-  end
+//       end
+//   end
 
-  always @(negedge ap_rst_n, posedge ap_clk) begin
-      if(!ap_rst_n) begin
-          cycle_counter <= 0;
-          read_cycle <= 0;
-          wgt_cycle <= 0;
-          write_cycle <= 0;
-          engine_counter <= 0;
-      end else begin
-          if(!ap_ready) cycle_counter <= cycle_counter +1;
-          if(r_read) read_cycle <= read_cycle + 1;
-          if(r_wgt) wgt_cycle <= wgt_cycle + 1;
-          if(r_write) write_cycle <= write_cycle + 1;
-          if(r_engine) engine_counter <= engine_counter + 1;
-      end
-  end
+//   always @(negedge ap_rst_n, posedge ap_clk) begin
+//       if(!ap_rst_n) begin
+//           cycle_counter <= 0;
+//           read_cycle <= 0;
+//           wgt_cycle <= 0;
+//           write_cycle <= 0;
+//           engine_counter <= 0;
+//       end else begin
+//           if(!ap_ready) cycle_counter <= cycle_counter +1;
+//           if(r_read) read_cycle <= read_cycle + 1;
+//           if(r_wgt) wgt_cycle <= wgt_cycle + 1;
+//           if(r_write) write_cycle <= write_cycle + 1;
+//           if(r_engine) engine_counter <= engine_counter + 1;
+//       end
+//   end
 
 	// // ILA monitoring combinatorial adder
 	// ila_0 i_ila_0 (

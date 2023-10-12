@@ -41,6 +41,7 @@ module krnl_acc_axi_ctrl_slave  (
     // output [31:0] input_width,
     output [31:0] ifm_size,
     output [31:0] wgt_size,
+    output [31:0] ofm_size,
     output [63:0] ifm_addr_base,
     output [63:0] wgt_addr_base,
     output [63:0] ofm_addr_base
@@ -65,13 +66,14 @@ localparam
     ADDR_CFG_CO     = 12'h014,
     ADDR_IFM_SIZE   = 12'h018,
     ADDR_WGT_SIZE   = 12'h01C,
+    ADDR_OFM_SIZE   = 12'h020,
     // ADDR_INPUT_WIDTH = 12'h01C,
-    ADDR_IFM_ADDR_BASE_0 = 12'h020,
-    ADDR_IFM_ADDR_BASE_1 = 12'h024,
-    ADDR_WGT_ADDR_BASE_0 = 12'h028,
-    ADDR_WGT_ADDR_BASE_1 = 12'h02C,
-    ADDR_OFM_ADDR_BASE_0 = 12'h030,
-    ADDR_OFM_ADDR_BASE_1 = 12'h034,
+    ADDR_IFM_ADDR_BASE_0 = 12'h040,
+    ADDR_IFM_ADDR_BASE_1 = 12'h044,
+    ADDR_WGT_ADDR_BASE_0 = 12'h048,
+    ADDR_WGT_ADDR_BASE_1 = 12'h04C,
+    ADDR_OFM_ADDR_BASE_0 = 12'h050,
+    ADDR_OFM_ADDR_BASE_1 = 12'h054,
 
     
     // registers write state machine
@@ -111,6 +113,7 @@ localparam
     // reg  [31:0]     reg_input_width;
     reg  [31:0]     reg_ifm_size;
     reg  [31:0]     reg_wgt_size;
+    reg  [31:0]     reg_ofm_size;
     reg  [63:0]     reg_ifm_addr_base;
     reg  [63:0]     reg_wgt_addr_base;
     reg  [63:0]     reg_ofm_addr_base;
@@ -227,6 +230,9 @@ localparam
                 ADDR_WGT_SIZE: begin
                     rdata <= reg_wgt_size;
                 end
+                ADDR_OFM_SIZE: begin
+                    rdata <= reg_ofm_size;
+                end
                 // --------------------------------------
                 ADDR_IFM_ADDR_BASE_0: begin
                     rdata <= reg_ifm_addr_base[31:0];
@@ -339,6 +345,15 @@ localparam
                 reg_wgt_size <= (WDATA & wmask) | (reg_wgt_size & ~wmask);
     end
 
+    // reg_ofm_size
+    always @(posedge ACLK) begin
+        if (!ARESETn)
+            reg_ofm_size <= 'h0;
+        else
+            if (w_hs && waddr == ADDR_OFM_SIZE)
+                reg_ofm_size <= (WDATA & wmask) | (reg_ofm_size & ~wmask);
+    end
+
     // reg_ifm_addr_base [31:0]
     always @(posedge ACLK) begin
         if (!ARESETn)
@@ -401,6 +416,7 @@ localparam
     // assign input_width  = reg_input_width;
     assign ifm_size     = reg_ifm_size;
     assign wgt_size     = reg_wgt_size;
+    assign ofm_size     = reg_ofm_size;
     assign ifm_addr_base     = reg_ifm_addr_base;
     assign wgt_addr_base    = reg_wgt_addr_base;
     assign ofm_addr_base    = reg_ofm_addr_base;
