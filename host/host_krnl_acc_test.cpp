@@ -17,6 +17,7 @@
 //#include <openssl/aes.h>
 #include <string.h>
 #include <thread>
+#include <math.h>
 
 // Please use 'xbutil list' command to get the device id of the target alveo card if multiple
 //   cards are installed in the system.
@@ -27,12 +28,16 @@
 #define krnl_acc_arg_CFG_CO       1
 #define krnl_acc_arg_IFM_SIZE      2
 #define krnl_acc_arg_WGT_SIZE       3
-#define krnl_acc_arg_IFM_ADDR_BASE  4
-#define krnl_acc_arg_WGT_ADDR_BASE   5
-#define krnl_acc_arg_OFM_ADDR_BASE  6
+#define krnl_acc_arg_OFM_SIZE       4
+#define krnl_acc_arg_IFM_ADDR_BASE  5
+#define krnl_acc_arg_WGT_ADDR_BASE  6
+#define krnl_acc_arg_OFM_ADDR_BASE  7
 
 #define TI 16
 #define TI_FACTOR 4
+#define ROW 5
+#define KK 4
+#define IW 64
 
 #define BUF_DEPTH 61
 #define OFM_H 61
@@ -50,11 +55,12 @@ void wrrite_ofm_validate_test(int* arr, int size){
     }
 }
 // function to write binary file
-void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int groups_num)
+void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int groups_num, int ci, int co)
 {
     std::ofstream file(file_name);
 
-    int ofm [OFM_C][OFM_H+4][OFM_W+4];
+    //int *ofm = new int[co][OFM_H+4][OFM_W+4];
+    std::vector<std::vector<std::vector<int>>> ofm(co, std::vector<std::vector<int>>(OFM_H+4, std::vector<int>(OFM_W+4, 0)));
 
     int oc, oh, ow, tw, thcnt;
     int i;
@@ -66,16 +72,16 @@ void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int g
         thcnt = 0;
         i = 0;
         for(int index = 0; index < ofm_len/4; index+=16) {
-            if(oc == 8) break;
+            if(oc == co) break;
 //            std::cout <<"test " << index << "  " << oc << "  " << oh << "  " << ow << "  "<< tw << "  " << thcnt << std::endl;
             
 
-            for(int i = 0; i < 16; i++){
+            for(int i = 0; i < TI; i++){
                 ofm[oc][oh][i + tw*TI] = write_buffer[ofm_len/4*j + index + i];
             }
             oh = oh + 1;
             thcnt = thcnt + 1;
-            if (thcnt == 5){
+            if (thcnt == ROW){
                 thcnt = 0;
                 tw = tw + 1;
                 oh = oh - 5;
@@ -84,13 +90,13 @@ void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int g
                     oh = oh + 5;
                 }
             }
-            if (oh == 65) {
+            if (oh == ROW*std::ceil((double)IW/ROW)) {
                 oh = 0;
                 oc = oc + 1;
             }
         }
 //            std::cout << "re_arranged successful" << std::endl;
-        for (int toc=0; toc < OFM_C; toc++) {
+        for (int toc=0; toc < co; toc++) {
             file << "\n\n";
             for (int toh=0; toh < OFM_H; toh++){
                 for (int tow=0; tow < OFM_W; tow++){
@@ -152,11 +158,12 @@ void print_help(void) {
 }
 
 
-void conv2d_thread(xrt::run run_krnl_acc, xrt::bo ifm_buffer, xrt::bo wgt_buffer, xrt::bo ofm_buffer, int ci, int co, int ifm_size, int wgt_size) {
+void conv2d_thread(xrt::run run_krnl_acc, xrt::bo ifm_buffer, xrt::bo wgt_buffer, xrt::bo ofm_buffer, int ci, int co, int ifm_size, int wgt_size, int ofm_size) {
     run_krnl_acc.set_arg(krnl_acc_arg_CFG_CI, ci);
     run_krnl_acc.set_arg(krnl_acc_arg_CFG_CO, co);
     run_krnl_acc.set_arg(krnl_acc_arg_IFM_SIZE, ifm_size);
     run_krnl_acc.set_arg(krnl_acc_arg_WGT_SIZE, wgt_size);
+    run_krnl_acc.set_arg(krnl_acc_arg_OFM_SIZE, ofm_size);
     run_krnl_acc.set_arg(krnl_acc_arg_IFM_ADDR_BASE, ifm_buffer);
     run_krnl_acc.set_arg(krnl_acc_arg_WGT_ADDR_BASE, wgt_buffer);
     run_krnl_acc.set_arg(krnl_acc_arg_OFM_ADDR_BASE, ofm_buffer);
@@ -175,11 +182,12 @@ float conv2d(xrt::kernel kernel,                     // kernel handle
                         int ci,                     // input channel = 8 * (ci + 1)
                         int co,
                         int ifm_size,
-                        int wgt_size)                     // output channel = 8 * (co + 1)
+                        int wgt_size,
+                        int ofm_size)                     // output channel = 8 * (co + 1)
 {
     struct timeval kernels_start_time, kernels_finish_time; // kernel execution time record
 
-    int thread_num = groups_num;    // thread number used to handle all data
+    int thread_num = 1;    // thread number used to handle all data
     // int thread_num = 1;
 //    std::cout << "conv2d called " << std::endl;
     std::vector<xrt::run> run_krnl_acc;
@@ -201,7 +209,7 @@ float conv2d(xrt::kernel kernel,                     // kernel handle
             for (i = 0; i < thread_num; i++)
             {
                 t[i] = std::thread(conv2d_thread, run_krnl_acc[i], ifm_sub_buffer[k * thread_num + i], wgt_sub_buffer[k * thread_num + i], ofm_sub_buffer[k * thread_num + i],
-                             ci, co, ifm_size, wgt_size);
+                             ci, co, ifm_size, wgt_size, ofm_size);
             }
             for (i = 0; i < thread_num; i++)
             {
@@ -213,7 +221,7 @@ float conv2d(xrt::kernel kernel,                     // kernel handle
             //run_krnl_cbc[i].set_arg(krnl_cbc_arg_SRC_ADDR, input_sub_buffer[k * thread_num + i]);   // use sub-buffer for source pointer argument
             //run_krnl_cbc[i].set_arg(krnl_cbc_arg_DEST_ADDR, output_sub_buffer[k * thread_num + i]); // use sub-buffer for source pointer argument
             t[i] = std::thread(conv2d_thread, run_krnl_acc[i], ifm_sub_buffer[k * thread_num + i], wgt_sub_buffer[k * thread_num + i], ofm_sub_buffer[k * thread_num + i], 
-                            ci, co, ifm_size, wgt_size);
+                            ci, co, ifm_size, wgt_size, ofm_size);
         }
         for (i = 0; i < residue; i++)
         {
@@ -223,7 +231,7 @@ float conv2d(xrt::kernel kernel,                     // kernel handle
     else // emulate ap_ctrl_hs running mode
     {
         for (int i = 0; i < groups_num; i++) {
-            conv2d_thread(run_krnl_acc[0], ifm_sub_buffer[i], wgt_sub_buffer[i], ofm_sub_buffer[i], ci, co, ifm_size, wgt_size);
+            conv2d_thread(run_krnl_acc[0], ifm_sub_buffer[i], wgt_sub_buffer[i], ofm_sub_buffer[i], ci, co, ifm_size, wgt_size, ofm_size);
         }
     }
 
@@ -292,9 +300,16 @@ int main(int argc, char *argv[]) {
     ci = 8*(cfg_ci + 1);
     co = 8*(cfg_co + 1);
 
-    int ifm_len = ci * (TI+3) * TI_FACTOR * 13 * 8;
-    int wgt_len = 4*4* ci* co* 13* TI_FACTOR;
-    int ofm_len = 4 * 13 * co * 64 * 5;
+    int num_col = std::ceil((double)IW/TI);
+    int num_row = std::ceil((double)IW/ROW);
+
+    int ifm_len = ci * (TI+KK-1) * num_col * num_row * (ROW+KK-1);
+    int wgt_len = KK*KK* ci* co* num_row * num_col;
+    int ofm_len = 4 * num_col * num_row * co * TI * ROW;
+
+    // int ifm_len = ci * (TI+3) * TI_FACTOR * 13 * 8;
+    // int wgt_len = 4*4* ci* co* 13* TI_FACTOR;
+    // int ofm_len = 4 * 13 * co * 64 * 5;
 
     std::cout << "      ifm size : " << ifm_len * groups_num << std::endl;
     std::cout << "      wgt size : " << wgt_len * groups_num << std::endl;
@@ -384,7 +399,7 @@ int main(int argc, char *argv[]) {
 
     // Run the kernel
     total_run_time = conv2d(kernel_krnl_acc, ifm_sub_buffer, wgt_sub_buffer, ofm_sub_buffer,
-                                      groups_num, chain, cfg_ci, cfg_co, ifm_len, wgt_len);
+                                      groups_num, chain, cfg_ci, cfg_co, ifm_len, wgt_len, ofm_len);
 
     // Dump result data from output device buffer
     ofm_buffer.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
@@ -401,15 +416,15 @@ int main(int argc, char *argv[]) {
     // } else {
     //     std::cout << "Data validation SUCCESS" << std::endl;
     // }
-    write_ofm_file("./data/hw_conv.txt", ofm_len, ofm, groups_num);
+    write_ofm_file("./data/hw_conv.txt", ofm_len, ofm, groups_num, ci, co);
     //wrrite_ofm_validate_test(ofm, ofm_len);
     std::cout << "CONVOLUTION OUTPUT GENERATED" << std::endl;
     
     std::cout << "Execution time = " << total_run_time << " ms" << std::endl;
 
-    int excution = (64 - 4 + 1) * (64 - 4 + 1); // (64 - 4 + 1) * (64 - 4 + 1) * 16 * 8 * 8 = 61 * 61 KB
-    std::cout << "Total # of processing " << excution * groups_num << "KB" << std::endl;
-    std::cout << "Throughput = " <<  excution * groups_num / total_run_time * 1000 / 1024 << " MB/s" << std::endl << std::endl;
+    int excution = (IW - KK + 1) * (IW - KK + 1) * co; // (64 - 4 + 1) * (64 - 4 + 1) * 16 * 8 * 8 = 61 * 61 KB
+    std::cout << "Total # of processing " << excution * groups_num << " Pixels" << std::endl;
+    std::cout << "Throughput = " <<  excution * groups_num / total_run_time * 1000/1024<< " KPixels/s" << std::endl << std::endl;
 //    std::cout << "Throughput = " << ifm_len * groups_num / total_run_time * 1000 / (1024 * 1024) << " MB/s" << std::endl << std::endl;
 
 }
