@@ -42,7 +42,7 @@ task automatic init_vips();
   rgen.set_ready_policy(XIL_AXI_READY_GEN_RANDOM);
   rgen.set_low_time_range(0,1);
   rgen.set_high_time_range(1,2);
-  rgen.set_event_count_range(1,2);
+  rgen.set_event_count_range(1,5);
   ifm_buffer.wr_driver.set_wready_gen(rgen);
   wgt_buffer.wr_driver.set_wready_gen(rgen);
   ofm_buffer.wr_driver.set_wready_gen(rgen);

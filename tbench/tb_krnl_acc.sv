@@ -10,11 +10,15 @@
 // `define CI 0
 // `define CO 0
 `define TI 16
-`define TI_FACTOR 64/`TI
+`define ROW 5
+`define WIDTH 64
+`define KK 4
+`define TI_FACTOR int'((`WIDTH+`TI-1)/`TI)
+`define ROW_FACTOR int'((`WIDTH+`ROW-1)/`ROW)
 `define CFG_CI (`CI+1)*8
 `define CFG_CO (`CO+1)*8
-`define IFM_LEN `CFG_CI*(`TI+3)*`TI_FACTOR*13*8
-`define WGT_LEN 4*4*`CFG_CI*`CFG_CO*13*`TI_FACTOR
+`define IFM_LEN int'(`CFG_CI*(`TI+`KK-1)*`TI_FACTOR*`ROW_FACTOR*(`ROW+`KK-1))
+`define WGT_LEN int'(`KK*`KK*`CFG_CI*`CFG_CO*`ROW_FACTOR*`TI_FACTOR)
 
 `define IFM_LEN_WORD `IFM_LEN/64
 `define WGT_LEN_WORD `WGT_LEN/64
@@ -26,7 +30,7 @@
 `define OUT_DATA_WIDTH 25
 
 //`define OFM_LEN `OFM_H*`OFM_W*`CFG_CO*4
-`define OFM_LEN 133120
+`define OFM_LEN int'(4*`TI_FACTOR*`ROW_FACTOR*`CFG_CO*`TI*`ROW)
 
 `define OFM_LEN_WORD `OFM_LEN/64
 
@@ -50,13 +54,14 @@ parameter ACC_CFG_CI      = 32'h0000_0010;
 parameter ACC_CFG_CO      = 32'h0000_0014;
 parameter ACC_IFM_SIZE      = 32'h0000_0018; 
 parameter ACC_WGT_SIZE      = 32'h0000_001C;  
+parameter ACC_OFM_SIZE      = 32'h0000_0020;  
 // parameter ACC_INPUT_WIDTH      = 32'h0000_001C; 
-parameter ACC_ADDR_IFM_ADDR_BASE_0 = 32'h0000_0020;
-parameter ACC_ADDR_IFM_ADDR_BASE_1 = 32'h0000_0024;
-parameter ACC_ADDR_WGT_ADDR_BASE_0 = 32'h0000_0028;
-parameter ACC_ADDR_WGT_ADDR_BASE_1 = 32'h0000_002C;
-parameter ACC_ADDR_OFM_ADDR_BASE_0 = 32'h0000_0030;
-parameter ACC_ADDR_OFM_ADDR_BASE_1 = 32'h0000_0034;
+parameter ACC_ADDR_IFM_ADDR_BASE_0 = 32'h0000_0040;
+parameter ACC_ADDR_IFM_ADDR_BASE_1 = 32'h0000_0044;
+parameter ACC_ADDR_WGT_ADDR_BASE_0 = 32'h0000_0048;
+parameter ACC_ADDR_WGT_ADDR_BASE_1 = 32'h0000_004C;
+parameter ACC_ADDR_OFM_ADDR_BASE_0 = 32'h0000_0050;
+parameter ACC_ADDR_OFM_ADDR_BASE_1 = 32'h0000_0054;
 
 // input/output buffer base address definition
 parameter IN_BUFFER_BASE0  = 64'h0000_0040_0000_0000;
@@ -501,6 +506,8 @@ initial  begin : main_test_routine
 
     int ifm_size = `IFM_LEN;
     int wgt_size = `WGT_LEN;
+    int ofm_size = `OFM_LEN;
+    int ofm_len_word = `OFM_LEN_WORD;
 
 //    file_ptr = $fopen("./script/test/ifm.dat", "rb");
 //    file_ptr = $fopen("../common/ifm.dat", "rb");
@@ -513,8 +520,10 @@ initial  begin : main_test_routine
     temp = $fread(wgt_data, file_ptr);
     $fclose(file_ptr); 
 
-        $display ("OFM_DATA SIZE : %d" , `OFM_LEN);
+        $display ("OFM_DATA SIZE : %d" , ofm_size);
         $display ("INPUT SIZE : %d" , `IW);
+
+        $display("OFM_LEN_WORD : %d", ofm_len_word);
 
     #2000
         init_vips();
@@ -533,7 +542,7 @@ initial  begin : main_test_routine
 
     blocking_write_register (krnl_acc_ctrl, ACC_IFM_SIZE, ifm_size[31:0]);                 // ifm_size 63232
     blocking_write_register (krnl_acc_ctrl, ACC_WGT_SIZE, wgt_size[31:0]);                 // wgt_size 53248
-
+    blocking_write_register (krnl_acc_ctrl, ACC_OFM_SIZE, ofm_size[31:0]);
 
     // fill input buffer memory with plain data
     in_buffer_fill_memory(ifm_buffer, IN_BUFFER_BASE0, ifm_data, 0, `IFM_LEN_WORD*`GROUP_NUM);   
@@ -567,7 +576,7 @@ initial  begin : main_test_routine
                     for(i = 0; i < 16; i=i+1) begin
 //                      ofm[oc][oh][i+tw*`TI] = ofm_data[`OFM_LEN_WORD*j + index][32*(i+1)-1 -: 32];
                       for(k = 0; k < 4; k=k+1)begin
-                        ofm[oc][oh][i+tw*`TI][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index][(32*(15-i)+(3-k)*8) +: 8];
+                        ofm[oc][oh][i+tw*`TI][k*8 +: 8] = ofm_data[ofm_len_word*j + index][(32*(15-i)+(3-k)*8) +: 8];
                       end
                     end
                     oh = oh + 1;
