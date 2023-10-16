@@ -32,33 +32,33 @@ task automatic init_vips();
 
 // Applying slv_random_backpressure_wready
   rgen = new("axi_random_backpressure_wready");
-  // rgen.set_ready_policy(XIL_AXI_READY_GEN_RANDOM);
-  // rgen.set_low_time_range(0,20);
-  // rgen.set_high_time_range(1,20);
-  // rgen.set_event_count_range(3,5);
-  // ifm_buffer.wr_driver.set_wready_gen(rgen);
-  // wgt_buffer.wr_driver.set_wready_gen(rgen);
-  // ofm_buffer.wr_driver.set_wready_gen(rgen);
   rgen.set_ready_policy(XIL_AXI_READY_GEN_RANDOM);
-  rgen.set_low_time_range(0,1);
-  rgen.set_high_time_range(1,2);
-  rgen.set_event_count_range(1,5);
+  rgen.set_low_time_range(0,20);
+  rgen.set_high_time_range(1,20);
+  rgen.set_event_count_range(3,5);
   ifm_buffer.wr_driver.set_wready_gen(rgen);
   wgt_buffer.wr_driver.set_wready_gen(rgen);
   ofm_buffer.wr_driver.set_wready_gen(rgen);
+  // rgen.set_ready_policy(XIL_AXI_READY_GEN_RANDOM);
+  // rgen.set_low_time_range(0,1);
+  // rgen.set_high_time_range(1,2);
+  // rgen.set_event_count_range(1,5);
+  // ifm_buffer.wr_driver.set_wready_gen(rgen);
+  // wgt_buffer.wr_driver.set_wready_gen(rgen);
+  // ofm_buffer.wr_driver.set_wready_gen(rgen);
 // Applying slv_random_delay_rvalid  
-  // ifm_buffer.mem_model.set_inter_beat_gap_delay_policy(XIL_AXI_MEMORY_DELAY_RANDOM);
-  // ifm_buffer.mem_model.set_inter_beat_gap_range(0,2);
-  // wgt_buffer.mem_model.set_inter_beat_gap_delay_policy(XIL_AXI_MEMORY_DELAY_RANDOM);
-  // wgt_buffer.mem_model.set_inter_beat_gap_range(0,2);
-  // ofm_buffer.mem_model.set_inter_beat_gap_delay_policy(XIL_AXI_MEMORY_DELAY_RANDOM);
-  // ofm_buffer.mem_model.set_inter_beat_gap_range(0,2);
   ifm_buffer.mem_model.set_inter_beat_gap_delay_policy(XIL_AXI_MEMORY_DELAY_RANDOM);
-  ifm_buffer.mem_model.set_inter_beat_gap_range(0,1);
+  ifm_buffer.mem_model.set_inter_beat_gap_range(0,2);
   wgt_buffer.mem_model.set_inter_beat_gap_delay_policy(XIL_AXI_MEMORY_DELAY_RANDOM);
-  wgt_buffer.mem_model.set_inter_beat_gap_range(0,1);
+  wgt_buffer.mem_model.set_inter_beat_gap_range(0,2);
   ofm_buffer.mem_model.set_inter_beat_gap_delay_policy(XIL_AXI_MEMORY_DELAY_RANDOM);
-  ofm_buffer.mem_model.set_inter_beat_gap_range(0,1);
+  ofm_buffer.mem_model.set_inter_beat_gap_range(0,2);
+  // ifm_buffer.mem_model.set_inter_beat_gap_delay_policy(XIL_AXI_MEMORY_DELAY_RANDOM);
+  // ifm_buffer.mem_model.set_inter_beat_gap_range(0,1);
+  // wgt_buffer.mem_model.set_inter_beat_gap_delay_policy(XIL_AXI_MEMORY_DELAY_RANDOM);
+  // wgt_buffer.mem_model.set_inter_beat_gap_range(0,1);
+  // ofm_buffer.mem_model.set_inter_beat_gap_delay_policy(XIL_AXI_MEMORY_DELAY_RANDOM);
+  // ofm_buffer.mem_model.set_inter_beat_gap_range(0,1);
 
 
 endtask

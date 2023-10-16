@@ -18,7 +18,6 @@ module PSUM_BUFF #(
     input signed [data_width-1:0] pe0_data,
     input signed [data_width-1:0] pe1_data,
     input signed [data_width-1:0] pe2_data,
-    input signed [data_width-1:0] pe3_data,
     output [data_width-1:0] fifo_out,
     output valid_fifo_out
 );
@@ -151,7 +150,6 @@ module PSUM_BUFF #(
         .pe0_data(pe0_data),
         .pe1_data(pe1_data),
         .pe2_data(pe2_data),
-        .pe3_data(pe3_data),
         .fifo_data(fifo_out_a),
         .out(adder_out)
     );

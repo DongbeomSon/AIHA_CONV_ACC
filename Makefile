@@ -51,6 +51,8 @@ V_MODE := hw
 CI := 0
 CO := 0
 
+IW := 64
+
 .phony: clean traces
 
 ################## resource generation and simulation 
@@ -62,13 +64,13 @@ pack_kernel:
 	rm -rf vivado_pack_krnl_project; mkdir vivado_pack_krnl_project; cd vivado_pack_krnl_project; vivado -mode batch -source ../pack_kernel.tcl -tclargs $(PART)
 
 runsim:
-	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM) $(CI) $(CO);
-	./runsim_krnl_xsim.sh $(GROUP_NUM) $(CI) $(CO);
+	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM) $(CI) $(CO) $(IW);
+	./runsim_krnl_xsim.sh $(GROUP_NUM) $(CI) $(CO) $(IW);
 #	cd data; python3 ../script/compare.py;
 #	cp ./script/compare.py ./data/t1/compare.py; cp ./script/compare.py ./data/t2/compare.py; cd data/t1; python3 ./compare.py; cd ..; cd t2; python3 ./compare.py;
 
 gen_tb:
-	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM) $(CI) $(CO);
+	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM) $(CI) $(CO) $(IW);
 #	rm ./data/*.txt; cd data; python3 testbench_gen.py
 
 validate:
@@ -82,6 +84,7 @@ XOCCLFLAGS := --link --optimize 3 --report_level 2
 #DEBUG_OPT := --profile_kernel data:all:all:all:all
 
 build_hw:
+	rm -rf vivado_pack_krnl_project; mkdir vivado_pack_krnl_project; cd vivado_pack_krnl_project; vivado -mode batch -source ../pack_kernel.tcl -tclargs $(PART);
 	v++ $(XOCCLFLAGS) $(XOCCFLAGS) $(DEBUG_OPT) --config krnl_acc_test.cfg -o krnl_acc_test_$(TARGET).xclbin krnl_acc.xo
 
 all: gen_ip pack_kernel build_hw

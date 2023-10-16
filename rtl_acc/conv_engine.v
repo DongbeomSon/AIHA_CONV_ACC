@@ -18,11 +18,11 @@ module conv_engine #(
 
 
     parameter OUT_DATA_WIDTH = 25,
-    parameter TI = 16,
-    parameter ROW = 5,
-    parameter S = 1,
-    parameter P = 1,
-    parameter K = 4
+    parameter T = 16,  //Tile_length
+    parameter R = 5,    //ROW
+    parameter S = 1,    //parallelize channel_output
+    parameter P = 1,    //parallelize channel_input
+    parameter K = 3     //kernel size
 ) (
     input clk,
     input rst_n,
@@ -36,6 +36,7 @@ module conv_engine #(
     input [31:0] ifm_size,
     input [31:0] wgt_size,
     input [31:0] ofm_size,
+    input [31:0] tile_num,
 
     // AXI stream slave port, receive data from AXI read master for IFM
     input          axis_slv_ifm_tvalid,
@@ -88,6 +89,7 @@ module conv_engine #(
     reg [31:0] r_ifm_size;
     reg [31:0] r_wgt_size;
     reg [31:0] r_ofm_size;
+    reg [31:0] r_tile_num;
     reg [63:0] r_ifm_addr_base;
     reg [63:0] r_wgt_addr_base;
     reg [63:0] r_ofm_addr_base;
@@ -119,8 +121,7 @@ module conv_engine #(
     wire wgt_xfer_clear;
 
     input_buffer #(
-        .DATA_WIDTH(WIFM_DATA_WIDTH),
-        .TEST_BYTE (63232)
+        .DATA_WIDTH(WIFM_DATA_WIDTH)
         //     .DATA_NUM_BYTE (1011712)
         //     .DATA_NUM (IFM_BUFF_WORD_NUM),
         //     .FIFO_ADDR_WIDTH (IFM_BUFF_ADDR_WIDTH)
@@ -161,8 +162,7 @@ module conv_engine #(
     wire wgt_buf_rdy;
 
     input_buffer #(
-        .DATA_WIDTH(WWGT_DATA_WIDTH),
-        .TEST_BYTE (53248)
+        .DATA_WIDTH(WWGT_DATA_WIDTH)
         //    .DATA_NUM_BYTE (851968)
         //    .DATA_NUM (WGT_BUFF_WORD_NUM),
         //    .FIFO_ADDR_WIDTH (WGT_BUFF_ADDR_WIDTH) //log_2 DATANUM + 1
@@ -211,8 +211,10 @@ module conv_engine #(
         end
     end
 
-    wire [63:0] ifm;
-    parser ifm_parser (
+    wire [55:0] ifm;
+    new_parser #(
+        .OUTPUT_WIDTH(56)
+    ) ifm_parser (
         .clk  (clk),
         .rst_n(rst_n),
 
@@ -227,9 +229,9 @@ module conv_engine #(
     );
 
 
-    wire [31:0] wgt;
-    parser #(
-        .OUTPUT_WIDTH(32)
+    wire [23:0] wgt;
+    new_parser #(
+        .OUTPUT_WIDTH(24)
     ) wgt_parser (
         .clk  (clk),
         .rst_n(rst_n),
@@ -263,7 +265,12 @@ module conv_engine #(
     CONV_ACC #(
         .out_data_width(OUT_DATA_WIDTH),
         .buf_addr_width(5),
-        .buf_depth(TI)
+        .T(T),
+        .R(R),
+        .S(S),
+        .P(P),
+        .K(K)
+
     ) conv_acc (
         .clk(clk),
         .rst_n(rst_n),
@@ -271,6 +278,7 @@ module conv_engine #(
         .start_conv(r_op_start),
         .cfg_ci(r_cfg_ci),
         .cfg_co(r_cfg_co),
+        .tile_num(tile_num),
         .ifm(ifm),
         .weight(wgt),
         .ofm_port0(ofm_port0),
@@ -346,6 +354,7 @@ module conv_engine #(
             r_ifm_size <= 0;
             r_wgt_size <= 0;
             r_ofm_size <= 0;
+            r_tile_num <= 0;
             //            ofm_xfer_addr <= 0;
             r_ifm_addr_base <= 0;
             r_wgt_addr_base <= 0;
@@ -358,6 +367,7 @@ module conv_engine #(
                 r_ifm_size <= ifm_size;
                 r_wgt_size <= wgt_size;
                 r_ofm_size <= ofm_size;
+                r_tile_num <= tile_num;
                 r_ifm_addr_base <= ifm_addr_base;
                 r_wgt_addr_base <= wgt_addr_base;
                 r_ofm_addr_base <= ofm_addr_base;
@@ -472,21 +482,21 @@ module conv_engine #(
         end
     end
 
-    ila_0 i_ila_0 (
-        .clk   (clk),                // input wire        clk
-        .probe0(op_start),           // input wire [0:0]  probe0  
-        .probe1(end_conv),           // input wire [0:0]  probe1 
-        .probe2(flag_op_start),      // input wire [0:0]  probe2 
-        .probe3(flag_end_conv),      // input wire [0:0] probe3 
-        .probe4(write_buffer_wait),  // input wire [0:0] probe4
-        .probe5(run_cycle),          // input wire [31:0]  probe5
-        .probe6(ifm_stall_cnt),      // input wire [31:0]  probe6 
-        .probe7(wgt_stall_cnt),      // input wire [31:0] probe7 
-        .probe8(ofm_stall_cnt),      // input wire [31:0] probe8
-        .probe9(stall_cnt),           // input wire [31:0] probe9
-        .probe10(ifm_cycle),      // input wire [31:0]  probe10 
-        .probe11(wgt_cycle),      // input wire [31:0] probe11 
-        .probe12(ofm_cycle)      // input wire [31:0] probe12  
-    );
+    // ila_0 i_ila_0 (
+    //     .clk    (clk),                // input wire        clk
+    //     .probe0 (op_start),           // input wire [0:0]  probe0  
+    //     .probe1 (end_conv),           // input wire [0:0]  probe1 
+    //     .probe2 (flag_op_start),      // input wire [0:0]  probe2 
+    //     .probe3 (flag_end_conv),      // input wire [0:0] probe3 
+    //     .probe4 (write_buffer_wait),  // input wire [0:0] probe4
+    //     .probe5 (run_cycle),          // input wire [31:0]  probe5
+    //     .probe6 (ifm_stall_cnt),      // input wire [31:0]  probe6 
+    //     .probe7 (wgt_stall_cnt),      // input wire [31:0] probe7 
+    //     .probe8 (ofm_stall_cnt),      // input wire [31:0] probe8
+    //     .probe9 (stall_cnt),          // input wire [31:0] probe9
+    //     .probe10(ifm_cycle),          // input wire [31:0]  probe10 
+    //     .probe11(wgt_cycle),          // input wire [31:0] probe11 
+    //     .probe12(ofm_cycle)           // input wire [31:0] probe12  
+    // );
 
 endmodule
