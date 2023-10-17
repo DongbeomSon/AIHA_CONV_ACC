@@ -6,10 +6,7 @@ module flatter #(
     //    parameter DATA_NUM_BYTE = 63232,
     parameter FIFO_ADDR_WIDTH = 7,
     parameter BURST_LENGTH = 64,
-    parameter BURST_LENGTH_BYTE = DATA_WIDTH_BYTE * BURST_LENGTH,
-    parameter TEST_BYTE = 63232,
-
-    parameter OUTPUT_XFER_SIZE = 133120
+    parameter BURST_LENGTH_BYTE = DATA_WIDTH_BYTE * BURST_LENGTH
     )
     (
     input clk,
