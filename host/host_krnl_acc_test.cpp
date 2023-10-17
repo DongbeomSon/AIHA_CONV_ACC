@@ -59,12 +59,16 @@ void wrrite_ofm_validate_test(int *arr, int size)
     }
 }
 // function to write binary file
-void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int groups_num, int ci, int co)
+void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int groups_num, int ci, int co, int iw, int num_row, int num_col)
 {
     std::ofstream file(file_name);
-
+    int a_ofm_h = num_row*ROW;
+    int a_ofm_w = num_col*TI;
+    int ofm_h, ofm_w;
+    ofm_h = iw - KK+1;
+    ofm_w = ofm_h;
     // int *ofm = new int[co][OFM_H+4][OFM_W+4];
-    std::vector<std::vector<std::vector<int>>> ofm(co, std::vector<std::vector<int>>(OFM_H + 4, std::vector<int>(OFM_W + 4, 0)));
+    std::vector<std::vector<std::vector<int>>> ofm(co, std::vector<std::vector<int>>(a_ofm_h, std::vector<int>(a_ofm_w, 0)));
 
     int oc, oh, ow, tw, thcnt;
     int i;
@@ -93,13 +97,13 @@ void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int g
                 thcnt = 0;
                 tw = tw + 1;
                 oh = oh - 5;
-                if (tw == 4)
+                if (tw == num_col)
                 {
                     tw = 0;
                     oh = oh + 5;
                 }
             }
-            if (oh == ROW * std::ceil((double)IW / ROW))
+            if (oh == ROW * std::ceil((double)iw / ROW))
             {
                 oh = 0;
                 oc = oc + 1;
@@ -109,12 +113,12 @@ void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int g
         for (int toc = 0; toc < co; toc++)
         {
             file << "\n\n";
-            for (int toh = 0; toh < OFM_H; toh++)
+            for (int toh = 0; toh < ofm_h; toh++)
             {
-                for (int tow = 0; tow < OFM_W; tow++)
+                for (int tow = 0; tow < ofm_w; tow++)
                 {
                     file << ofm[toc][toh][tow] << " ";
-                    if (tow == OFM_W - 1)
+                    if (tow == ofm_w - 1)
                     {
                         file << "\n";
                     }
@@ -269,13 +273,14 @@ int main(int argc, char *argv[])
 {
 
     int opt;
-    const char *optstring = "g:i:o:sh:d";
+    const char *optstring = "g:i:o:w:sh:d";
 
     int groups_num = 1;
     int cfg_ci = 0;
     int cfg_co = 0;
     bool ILA_flag = false;
     int chain = 1; // 0 means ap_ctrl_hs mode, 1 mean ap_ctrl_chain mode
+    int iw = 64;
 
     while ((opt = getopt(argc, argv, optstring)) != -1)
     {
@@ -292,6 +297,11 @@ int main(int argc, char *argv[])
         if ((opt == 'o') && optarg)
         {
             cfg_co = std::stoi(std::string(optarg));
+        }
+
+        if ((opt == 'w') && optarg)
+        {
+            iw = std::stoi(std::string(optarg));
         }
 
         if (opt == 's')
@@ -333,8 +343,8 @@ int main(int argc, char *argv[])
     ci = 8 * (cfg_ci + 1);
     co = 8 * (cfg_co + 1);
 
-    int num_col = std::ceil((double)IW / TI);
-    int num_row = std::ceil((double)IW / ROW);
+    int num_col = std::ceil((double)iw / TI);
+    int num_row = std::ceil((double)iw / ROW);
     int tile_num = num_col*num_row*co;
 
     int ifm_len = ci * (TI + KK - 1) * num_col * num_row * (ROW + KK - 1);
@@ -453,13 +463,13 @@ int main(int argc, char *argv[])
     // } else {
     //     std::cout << "Data validation SUCCESS" << std::endl;
     // }
-    write_ofm_file("./data/hw_conv.txt", ofm_len, ofm, groups_num, ci, co);
+    write_ofm_file("./data/hw_conv.txt", ofm_len, ofm, groups_num, ci, co, iw, num_row, num_col);
     // wrrite_ofm_validate_test(ofm, ofm_len);
     std::cout << "CONVOLUTION OUTPUT GENERATED" << std::endl;
 
     std::cout << "Execution time = " << total_run_time << " ms" << std::endl;
 
-    int excution = (IW - KK + 1) * (IW - KK + 1) * co; // (64 - 4 + 1) * (64 - 4 + 1) * 16 * 8 * 8 = 61 * 61 KB
+    int excution = (iw - KK + 1) * (iw - KK + 1) * co; // (64 - 4 + 1) * (64 - 4 + 1) * 16 * 8 * 8 = 61 * 61 KB
     std::cout << "Total # of processing " << excution * groups_num << " Pixels" << std::endl;
     std::cout << "Throughput = " << excution * groups_num / total_run_time * 1000 / 1024 << " KPixels/s" << std::endl
               << std::endl;
