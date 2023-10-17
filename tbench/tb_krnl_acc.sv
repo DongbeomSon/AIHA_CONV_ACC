@@ -13,8 +13,8 @@
 `define ROW 5
 `define WIDTH 64
 `define KK 3
-`define TI_FACTOR int'((`WIDTH+`TI-1)/`TI)
-`define ROW_FACTOR int'((`WIDTH+`ROW-1)/`ROW)
+`define TI_FACTOR int'((`IW+`TI-1)/`TI)
+`define ROW_FACTOR int'((`IW+`ROW-1)/`ROW)
 `define CFG_CI (`CI+1)*8
 `define CFG_CO (`CO+1)*8
 `define IFM_LEN int'(`CFG_CI*(`TI+`KK-1)*`TI_FACTOR*`ROW_FACTOR*(`ROW+`KK-1))
@@ -26,8 +26,8 @@
 
 `define BUF_DEPTH 62
 `define OFM_C `CFG_CO
-`define OFM_H `BUF_DEPTH
-`define OFM_W `BUF_DEPTH
+`define OFM_H `IW-`KK+1
+`define OFM_W `IW-`KK+1
 `define OUT_DATA_WIDTH 25
 
 //`define OFM_LEN `OFM_H*`OFM_W*`CFG_CO*4
