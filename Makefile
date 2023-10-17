@@ -73,7 +73,13 @@ gen_tb:
 	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM) $(CI) $(CO) $(IW);
 #	rm ./data/*.txt; cd data; python3 testbench_gen.py
 
+
 validate:
+	cd data; python3 ../script/compare.py $(V_MODE);
+
+runhw:
+	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM) $(CI) $(CO) $(IW);
+	./host_krnl_acc_test -i $(CI) -o $(CO) -w $(IW);
 	cd data; python3 ../script/compare.py $(V_MODE);
 
 ################## hardware build 

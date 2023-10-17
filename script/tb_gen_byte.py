@@ -40,9 +40,12 @@ ow = iw-kk+1
 
 tile_length = 16
 ROW = 5
-tile_col = math.ceil(ih/tile_length)
-tile_row = math.ceil(ih/ROW)
+tile_col = math.ceil(oh/tile_length)
+tile_row = math.ceil(oh/ROW)
 ifm_byte = kk-1 + ROW
+
+print('{0} col'.format(tile_col))
+print('{0} row'.format(tile_row))
 
 
 gen_txt = True

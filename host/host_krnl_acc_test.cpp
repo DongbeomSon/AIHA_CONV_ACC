@@ -88,7 +88,9 @@ void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int g
 
             for (int i = 0; i < TI; i++)
             {
-                ofm[oc][oh][i + tw * TI] = write_buffer[ofm_len / 4 * j + index + i];
+                    if((oh < ofm_h) & (i+tw*TI < ofm_w)){
+                        ofm[oc][oh][i + tw * TI] = write_buffer[ofm_len / 4 * j + index + i];
+                    }
             }
             oh = oh + 1;
             thcnt = thcnt + 1;
@@ -96,14 +98,14 @@ void write_ofm_file(const char *file_name, int ofm_len, int *write_buffer, int g
             {
                 thcnt = 0;
                 tw = tw + 1;
-                oh = oh - 5;
+                oh = oh - ROW;
                 if (tw == num_col)
                 {
                     tw = 0;
-                    oh = oh + 5;
+                    oh = oh + ROW;
                 }
             }
-            if (oh == ROW * std::ceil((double)iw / ROW))
+            if (oh == ROW * num_row)
             {
                 oh = 0;
                 oc = oc + 1;
@@ -342,9 +344,10 @@ int main(int argc, char *argv[])
     int ci, co;
     ci = 8 * (cfg_ci + 1);
     co = 8 * (cfg_co + 1);
+    int ow = iw-KK+1;
 
-    int num_col = std::ceil((double)iw / TI);
-    int num_row = std::ceil((double)iw / ROW);
+    int num_col = std::ceil((double)ow / TI);
+    int num_row = std::ceil((double)ow / ROW);
     int tile_num = num_col*num_row*co;
 
     int ifm_len = ci * (TI + KK - 1) * num_col * num_row * (ROW + KK - 1);
@@ -469,7 +472,7 @@ int main(int argc, char *argv[])
 
     std::cout << "Execution time = " << total_run_time << " ms" << std::endl;
 
-    int excution = (iw - KK + 1) * (iw - KK + 1) * co; // (64 - 4 + 1) * (64 - 4 + 1) * 16 * 8 * 8 = 61 * 61 KB
+    int excution = ow * ow * co; // (64 - 4 + 1) * (64 - 4 + 1) * 16 * 8 * 8 = 61 * 61 KB
     std::cout << "Total # of processing " << excution * groups_num << " Pixels" << std::endl;
     std::cout << "Throughput = " << excution * groups_num / total_run_time * 1000 / 1024 << " KPixels/s" << std::endl
               << std::endl;

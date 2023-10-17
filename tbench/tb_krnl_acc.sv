@@ -13,8 +13,8 @@
 `define ROW 5
 `define WIDTH 64
 `define KK 3
-`define TI_FACTOR int'((`IW+`TI-1)/`TI)
-`define ROW_FACTOR int'((`IW+`ROW-1)/`ROW)
+`define TI_FACTOR int'((`IW-`KK+1+`TI-1)/`TI)
+`define ROW_FACTOR int'((`IW-`KK+1+`ROW-1)/`ROW)
 `define CFG_CI (`CI+1)*8
 `define CFG_CO (`CO+1)*8
 `define IFM_LEN int'(`CFG_CI*(`TI+`KK-1)*`TI_FACTOR*`ROW_FACTOR*(`ROW+`KK-1))
@@ -580,21 +580,22 @@ initial  begin : main_test_routine
                     for(i = 0; i < 16; i=i+1) begin
 //                      ofm[oc][oh][i+tw*`TI] = ofm_data[`OFM_LEN_WORD*j + index][32*(i+1)-1 -: 32];
                       for(k = 0; k < 4; k=k+1)begin
-                        ofm[oc][oh][i+tw*`TI][k*8 +: 8] = ofm_data[ofm_len_word*j + index][(32*(15-i)+(3-k)*8) +: 8];
+                        if((oh < `OFM_H) & (i+tw*`TI < `OFM_W))
+                          ofm[oc][oh][i+tw*`TI][k*8 +: 8] = ofm_data[ofm_len_word*j + index][(32*(15-i)+(3-k)*8) +: 8];
                       end
                     end
                     oh = oh + 1;
                     thcnt = thcnt + 1;
-                          if (thcnt == 5) begin
+                          if (thcnt == `ROW) begin
                               thcnt = 0;
                               tw = tw + 1;
-                              oh = oh - 5;
-                              if (tw == 4) begin
+                              oh = oh - `ROW;
+                              if (tw == `TI_FACTOR) begin
                                   tw = 0;
-                                  oh = oh + 5;
+                                  oh = oh + `ROW;
                               end
                           end
-                          if (oh == 65) begin
+                          if (oh == `ROW * `ROW_FACTOR) begin
                               oh = 0;
                               oc = oc + 1;
                               $display("\033[33m[ConvKernel: ] Computing channel: %d\033[0m", oc);

@@ -43,26 +43,29 @@ module input_buffer #(
 
     wire [31:0] data_byte = input_byte + {20'b0, addr_base[11:0]};
 
-    reg [31:0] read_num;
-    reg final_read;
-    reg [31:0] final_read_num;
-    reg [31:0] final_xfer_size;
-    always @(*) begin
-        read_num <= data_byte / BURST_LENGTH_BYTE;
-        final_read_num <= (data_byte % BURST_LENGTH_BYTE) / DATA_WIDTH_BYTE;
-        final_read <= |final_read_num;
-        final_xfer_size <= data_byte % BURST_LENGTH_BYTE;
-    end
+    // reg [31:0] read_num;
+    // reg final_read;
+    // reg [31:0] final_read_num;
+    // reg [31:0] final_xfer_size;
+    // always @(*) begin
+    //     read_num <= data_byte / BURST_LENGTH_BYTE;
+    //     final_read_num <= (data_byte % BURST_LENGTH_BYTE) / DATA_WIDTH_BYTE;
+    //     final_read <= |final_read_num;
+    //     final_xfer_size <= data_byte % BURST_LENGTH_BYTE;
+    // end
 
-    wire                     in_fifo0_full;
-    wire                     in_fifo0_empty;
-    wire                     in_fifo0_push_req;
-    wire [            511:0] in_fifo0_push_data;
-    wire                     in_fifo0_pop_req;
-    wire [            511:0] in_fifo0_pop_data;
+    wire in_fifo0_full;
+    wire in_fifo0_empty;
+    wire in_fifo0_push_req;
+    wire [511:0] in_fifo0_push_data;
+    wire in_fifo0_pop_req;
+    wire [511:0] in_fifo0_pop_data;
     wire [FIFO_ADDR_WIDTH:0] in_fifo0_data_cnt;
 
     assign stall = in_fifo0_empty;
+
+    reg r_end_conv;
+    reg r_op_start;
 
     reg fifo_clear;
 
@@ -85,10 +88,11 @@ module input_buffer #(
     );
     reg r_pop_req;
     // assign in_fifo0_push_req = buf_rdy ? pop_req : valid & ready;
-    reg [31:0] align_addr_cnt;
+    // reg [31:0] align_addr_cnt;
     assign ready = !in_fifo0_full;
-    wire addr_aligning = |align_addr_cnt;
-    assign in_fifo0_push_req = !addr_aligning & valid & ready;
+    // wire addr_aligning = |align_addr_cnt;
+    //!addr_aligning & 
+    assign in_fifo0_push_req = r_op_start & valid & ready;
 
 
     always @(posedge clk, negedge rst_n) begin
@@ -136,36 +140,37 @@ module input_buffer #(
 
     reg [63:0] r_addr_offset;
     assign addr_offset = r_addr_offset;
+    // always @(*) begin
+    //     r_addr_offset = addr_cnt * DATA_NUM * BURST_LENGTH + {addr_base[63:12], 12'b0};
+    // end
+
     always @(*) begin
-        r_addr_offset = addr_cnt * DATA_NUM * BURST_LENGTH + {addr_base[63:12], 12'b0};
+        r_addr_offset = addr_base;
     end
 
-    reg r_end_conv;
-    reg r_op_start;
-
-    always @(posedge clk, negedge rst_n) begin
-        if (!rst_n) begin
-            addr_cnt  <= 0;
-            xfer_size <= BURST_LENGTH_BYTE;
-        end else begin
-            if (end_conv) begin
-                addr_cnt  <= 0;
-                xfer_size <= BURST_LENGTH_BYTE;
-            end else if (!r_end_conv & rmst_done) begin
-                if (addr_cnt == read_num - 1) begin
-                    if (final_read) begin
-                        addr_cnt  <= addr_cnt + 1;
-                        xfer_size <= final_xfer_size;
-                    end else begin
-                        addr_cnt <= 0;
-                    end
-                end else begin
-                    addr_cnt  <= (addr_cnt == read_num) ? 0 : addr_cnt + 1;
-                    xfer_size <= BURST_LENGTH_BYTE;
-                end
-            end
-        end
-    end
+    // always @(posedge clk, negedge rst_n) begin
+    //     if (!rst_n) begin
+    //         addr_cnt  <= 0;
+    //         xfer_size <= BURST_LENGTH_BYTE;
+    //     end else begin
+    //         if (end_conv) begin
+    //             addr_cnt  <= 0;
+    //             xfer_size <= BURST_LENGTH_BYTE;
+    //         end else if (!r_end_conv & rmst_done) begin
+    //             if (addr_cnt == read_num - 1) begin
+    //                 if (final_read) begin
+    //                     addr_cnt  <= addr_cnt + 1;
+    //                     xfer_size <= final_xfer_size;
+    //                 end else begin
+    //                     addr_cnt <= 0;
+    //                 end
+    //             end else begin
+    //                 addr_cnt  <= (addr_cnt == read_num) ? 0 : addr_cnt + 1;
+    //                 xfer_size <= BURST_LENGTH_BYTE;
+    //             end
+    //         end
+    //     end
+    // end
 
     assign xfer_clear = in_fifo0_empty;
 
@@ -175,7 +180,7 @@ module input_buffer #(
             fifo_clear <= 0;
         end else begin
 
-            if ((end_conv | r_end_conv) & !rmst_rised) begin
+            if ((end_conv | r_end_conv)) begin
                 fifo_clear <= 1;
             end else begin
                 fifo_clear <= 0;
@@ -188,17 +193,17 @@ module input_buffer #(
         end
     end
 
-    always @(posedge clk, negedge rst_n) begin
-        if (!rst_n) begin
-            align_addr_cnt <= 0;
-        end else begin
-            if (rmst_req & !(|addr_cnt)) begin
-                align_addr_cnt <= addr_base[11:6];
-            end else if (ready & valid & (|align_addr_cnt)) begin
-                align_addr_cnt <= align_addr_cnt - 1;
-            end
-        end
-    end
+    // always @(posedge clk, negedge rst_n) begin
+    //     if (!rst_n) begin
+    //         align_addr_cnt <= 0;
+    //     end else begin
+    //         if (rmst_req & !(|addr_cnt)) begin
+    //             align_addr_cnt <= addr_base[11:6];
+    //         end else if (ready & valid & (|align_addr_cnt)) begin
+    //             align_addr_cnt <= align_addr_cnt - 1;
+    //         end
+    //     end
+    // end
 
 
     always @(posedge clk, negedge rst_n) begin
@@ -207,19 +212,20 @@ module input_buffer #(
             rmst_rised <= 0;
             //               buf_rdy <= 0;
             r_op_start <= 0;
-
+            xfer_size  <= 0;
         end else begin
             if (end_conv) r_op_start <= 0;
             else if (op_start) begin
                 rmst_req   <= 1;
                 rmst_rised <= 1;
                 r_op_start <= 1;
-
+                xfer_size  <= data_byte;
             end else if (rmst_req) rmst_req <= 0;
             else if (rmst_done) begin
                 rmst_rised <= 0;
             end else if (r_op_start) begin
-                if (in_fifo0_data_cnt < BURST_LENGTH & !rmst_rised) begin
+                // if (in_fifo0_data_cnt < BURST_LENGTH & !rmst_rised) begin
+                if (!rmst_rised) begin
                     rmst_rised <= 1;
                     rmst_req   <= 1;
                 end

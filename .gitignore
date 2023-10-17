@@ -24,3 +24,4 @@ xilinx*
 host_krnl_acc_test
 *.ltx
 log/
+data*
