@@ -7,26 +7,32 @@
 
 `timescale 1ns/1ps
 
-`define CI 0
-`define CO 0
-`define TI 28
-`define TI_FACTOR 112/`TI
-`define CFG_CI (`CI+1)*8
-`define CFG_CO (`CO+1)*8
-`define IFM_LEN 491520 //`CFG_CI*(`TI+2)*`TI_FACTOR*16*8
-`define WGT_LEN 9216//3*3*4*8*32*32 //3*3*`CFG_CI*`CFG_CO*8*`TI_FACTOR
+// `define CI 0
+// `define CO 0
+`define TI 14
+`define ROW 14
+`define WIDTH 112
+`define KK 3
+`define TI_FACTOR 8//int'((`IW-`KK+1+`TI-1)/`TI)
+`define ROW_FACTOR 8//int'((`IW-`KK+1+`ROW-1)/`ROW)
+`define CFG_CI 64
+`define CFG_CO 64
+`define IFM_LEN int'(`CFG_CI*(`TI+`KK-1)*`TI_FACTOR*`ROW_FACTOR*(`ROW+`KK-1))
+`define WGT_LEN int'(`KK*`KK*`CFG_CI*`CFG_CO*`ROW_FACTOR*`TI_FACTOR)
+`define TILE_NUM `TI_FACTOR*`ROW_FACTOR*`CFG_CO
 
 `define IFM_LEN_WORD `IFM_LEN/64
 `define WGT_LEN_WORD `WGT_LEN/64
 
 `define BUF_DEPTH 112
-`define OFM_C 32
-`define OFM_H `BUF_DEPTH
-`define OFM_W `BUF_DEPTH
+`define OFM_C `CFG_CO
+`define OFM_H `IW-`KK+1
+`define OFM_W `IW-`KK+1
 `define OUT_DATA_WIDTH 32
 
 //`define OFM_LEN `OFM_H*`OFM_W*`CFG_CO*4
-`define OFM_LEN 1605632
+`define OFM_LEN int'(4*`TI_FACTOR*`ROW_FACTOR*64*`TI*`ROW)
+
 `define OFM_LEN_WORD `OFM_LEN/64
 
 
@@ -46,13 +52,18 @@ parameter CTRL_READY_MASK        = 32'h00000008;
 parameter CTRL_CONTINUE_MASK     = 32'h00000010; 
 // krnl_acc argument
 parameter ACC_CFG_CI      = 32'h0000_0010; 
-parameter ACC_CFG_CO      = 32'h0000_0018; 
-parameter ACC_ADDR_IFM_ADDR_BASE_0 = 32'h0000_0020;
-parameter ACC_ADDR_IFM_ADDR_BASE_1 = 32'h0000_0024;
-parameter ACC_ADDR_WGT_ADDR_BASE_0 = 32'h0000_0028;
-parameter ACC_ADDR_WGT_ADDR_BASE_1 = 32'h0000_002C;
-parameter ACC_ADDR_OFM_ADDR_BASE_0 = 32'h0000_0030;
-parameter ACC_ADDR_OFM_ADDR_BASE_1 = 32'h0000_0034;
+parameter ACC_CFG_CO      = 32'h0000_0014;
+parameter ACC_IFM_SIZE      = 32'h0000_0018; 
+parameter ACC_WGT_SIZE      = 32'h0000_001C;  
+parameter ACC_OFM_SIZE      = 32'h0000_0020;  
+parameter ACC_TILE_NUM      = 32'h0000_0024;
+// parameter ACC_INPUT_WIDTH      = 32'h0000_001C; 
+parameter ACC_ADDR_IFM_ADDR_BASE_0 = 32'h0000_0040;
+parameter ACC_ADDR_IFM_ADDR_BASE_1 = 32'h0000_0044;
+parameter ACC_ADDR_WGT_ADDR_BASE_0 = 32'h0000_0048;
+parameter ACC_ADDR_WGT_ADDR_BASE_1 = 32'h0000_004C;
+parameter ACC_ADDR_OFM_ADDR_BASE_0 = 32'h0000_0050;
+parameter ACC_ADDR_OFM_ADDR_BASE_1 = 32'h0000_0054;
 
 // input/output buffer base address definition
 parameter IN_BUFFER_BASE0  = 64'h0000_0040_0000_0000;
@@ -468,6 +479,8 @@ end
     integer toc;
     integer toh;
     integer tow;
+    integer th;
+    integer ow;
     reg stop_flag;
 
 initial  begin : main_test_routine
@@ -492,21 +505,30 @@ initial  begin : main_test_routine
     int fp_w;
 
     int toc, toh, tow;
-    int oc, th, ow, index;
+    int oc, oh, tw, index;
     int thcnt;
+
+    static int ifm_size = `IFM_LEN;
+    static int wgt_size = `WGT_LEN;
+    static int ofm_size = `OFM_LEN;
+    static int tile_num = 32'd4096;
+    static int ofm_len_word = `OFM_LEN_WORD;
 
 //    file_ptr = $fopen("./script/test/ifm.dat", "rb");
 //    file_ptr = $fopen("../common/ifm.dat", "rb");
     file_ptr = $fopen("./data/ifm.dat", "rb");
-    $display ("IFM_DATA SIZE : %d" , `IFM_LEN);
+    $display ("IFM_DATA SIZE : %d" , ifm_size);
     temp = $fread(ifm_data, file_ptr);
     $fclose(file_ptr);    
     file_ptr = $fopen("./data/wgt.dat", "rb");
-      $display ("WGT_DATA SIZE : %d" , `WGT_LEN);
+      $display ("WGT_DATA SIZE : %d" , wgt_size);
     temp = $fread(wgt_data, file_ptr);
     $fclose(file_ptr); 
 
-        $display ("OFM_DATA SIZE : %d" , `OFM_LEN);
+        $display ("OFM_DATA SIZE : %d" , ofm_size);
+        $display ("INPUT SIZE : %d" , `IW);
+
+        $display("OFM_LEN_WORD : %d", ofm_len_word);
 
     #2000
         init_vips();
@@ -519,8 +541,14 @@ initial  begin : main_test_routine
     $display("  CONVOLUTION ACCLEALATOR TEST, total %1d groups", `GROUP_NUM);
     $display("-------------------------------------------------------------------------------------");    
     // set kernel registers                      
-    blocking_write_register (krnl_acc_ctrl, ACC_CFG_CI, 32'h`CI);                 // CI = 0 >> CFG_CI = 8 = 8*(CI+1)
-    blocking_write_register (krnl_acc_ctrl, ACC_CFG_CO, 32'h`CO);                 // CO = 0 >> CFG_CI = 8 = 8*(CI+1)
+    blocking_write_register (krnl_acc_ctrl, ACC_CFG_CI, 32'd7);                 // CI = 0 >> CFG_CI = 8 = 8*(CI+1)
+    blocking_write_register (krnl_acc_ctrl, ACC_CFG_CO, 32'd7);                 // CO = 0 >> CFG_CI = 8 = 8*(CI+1)
+    // blocking_write_register (krnl_acc_ctrl, ACC_INPUT_WIDTH, 32'd`IW);
+
+    blocking_write_register (krnl_acc_ctrl, ACC_IFM_SIZE, ifm_size[31:0]);                 // ifm_size 63232
+    blocking_write_register (krnl_acc_ctrl, ACC_WGT_SIZE, wgt_size[31:0]);                 // wgt_size 53248
+    blocking_write_register (krnl_acc_ctrl, ACC_OFM_SIZE, ofm_size[31:0]);
+    blocking_write_register (krnl_acc_ctrl, ACC_TILE_NUM, tile_num[31:0]);
 
     // fill input buffer memory with plain data
     in_buffer_fill_memory(ifm_buffer, IN_BUFFER_BASE0, ifm_data, 0, `IFM_LEN_WORD*`GROUP_NUM);   
@@ -531,14 +559,12 @@ initial  begin : main_test_routine
 
     // dump output buffer memory data
     out_buffer_dump_memory(ofm_buffer, OUT_BUFFER_BASE2, ofm_data, 0, `OFM_LEN_WORD*`GROUP_NUM);
-	
-	
+
     #1000
     $display("-------------------------------------------------------------------------------------");
     $display("  PROCESS COMPLITED    ");
     $display("-------------------------------------------------------------------------------------");
-	
-	
+  
 
     //Data compare
     fp_w = $fopen("./data/conv_acc_out.txt");
@@ -558,11 +584,13 @@ initial  begin : main_test_routine
                       for(th=0; th<14; th=th+1) begin
                         for(i = 0; i < 16; i=i+1) begin
                           for(k = 0; k < 4; k=k+1) begin
-                            ofm[i][th+toh*14][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index][(32*(15-i)+(3-k)*8) +: 8];
-                            ofm[i+16][th+toh*14][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index+1][(32*(15-i)+(3-k)*8) +: 8];
+                            ofm[i][th+toh*14][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index][(32*(i)+(3-k)*8) +: 8];
+                            ofm[i+16][th+toh*14][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index+1][(32*(i)+(3-k)*8) +: 8];
+                            ofm[i+32][th+toh*14][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index+2][(32*(i)+(3-k)*8) +: 8];
+                            ofm[i+48][th+toh*14][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index+3][(32*(i)+(3-k)*8) +: 8];
                           end
                         end
-                        index = index + 2;
+                        index = index + 4;
                       end
                     end
                    end

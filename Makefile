@@ -48,6 +48,10 @@ GROUP_NUM := 1
 
 V_MODE := hw
 
+CI := 7
+CO := 7
+
+IW := 114
 
 .phony: clean traces
 
@@ -61,24 +65,32 @@ pack_kernel:
 
 runsim:
 	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM);
-	./runsim_krnl_xsim.sh $(GROUP_NUM);
+	./runsim_krnl_xsim.sh $(GROUP_NUM) $(CI) $(CO) $(IW);
 #	cd data; python3 ../script/compare.py;
+#	cp ./script/compare.py ./data/t1/compare.py; cp ./script/compare.py ./data/t2/compare.py; cd data/t1; python3 ./compare.py; cd ..; cd t2; python3 ./compare.py;
 
 gen_tb:
-	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM);
+	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM) $(CI) $(CO) $(IW);
 #	rm ./data/*.txt; cd data; python3 testbench_gen.py
+
 
 validate:
 	cd data; python3 ../script/compare.py $(V_MODE);
 
+runhw:
+	rm -rf data; mkdir data; cd data; python3 ../script/tb_gen_byte.py $(GROUP_NUM) $(CI) $(CO) $(IW);
+	./host_krnl_acc_test -i $(CI) -o $(CO) -w $(IW);
+	cd data; python3 ../script/compare.py $(V_MODE);
+
 ################## hardware build 
 XOCCFLAGS := --platform $(PLATFORM) -t $(TARGET)  -s -g
-XOCCLFLAGS := --link --optimize 3
+XOCCLFLAGS := --link --optimize 3 --report_level 2
 # You could uncomment following line and modify the options for hardware debug/profiling
 #DEBUG_OPT := --debug.chipscope krnl_aes_1 --debug.chipscope krnl_acc_1 --debug.protocol all --profile_kernel data:all:all:all:all
 #DEBUG_OPT := --profile_kernel data:all:all:all:all
 
 build_hw:
+	rm -rf vivado_pack_krnl_project; mkdir vivado_pack_krnl_project; cd vivado_pack_krnl_project; vivado -mode batch -source ../pack_kernel.tcl -tclargs $(PART);
 	v++ $(XOCCLFLAGS) $(XOCCFLAGS) $(DEBUG_OPT) --config krnl_acc_test.cfg -o krnl_acc_test_$(TARGET).xclbin krnl_acc.xo
 
 all: gen_ip pack_kernel build_hw

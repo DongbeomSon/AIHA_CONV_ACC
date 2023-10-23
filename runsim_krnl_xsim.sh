@@ -6,34 +6,45 @@
 #
 
 # number of data groups (packet) to be processed
-export CI=0
-export CO=0
-export TI=28
-export TI_FACTOR=$[112/$TI]
+# export CI=0
+# export CO=0
+export GROUP_NUM=$1
+export CI=$7
+export CO=$7
+export TI=$14
+export IW=$114
+export TI_FACTOR=$[IW/$TI]
 export CFG_CI=$[$[$CI+1] * 8]
 export CFG_CO=$[$[$CO+1] * 8]
-export IFM_LEN=$[$[$TI+2]*$CFG_CI*$TI_FACTOR*16*8*4*4]
-export WGT_LEN=$[3*3*$CFG_CI*$CFG_CO*8*$TI_FACTOR*4*4]
-export OFM_LEN=$[112*112*$CFG_CO*4*4]
+# export IFM_LEN=$[$[$TI+3]*$CFG_CI*$TI_FACTOR*13*8]
+# export WGT_LEN=$[4*4*$CFG_CI*$CFG_CO*13*$TI_FACTOR]
+# export OFM_LEN=$[61*61*$CFG_CO*4]
+# export IW=64
 # export GROUP_NUM=1
-export GROUP_NUM=$1
+
 
 echo $GROUP_NUM
-echo $IFM_LEN
-echo $WGT_LEN
+echo $CI
+echo $CO
+echo $IW
+# echo $IFM_LEN
+# echo $WGT_LEN
 
-rm -f ifm.dat wgt.dat
-for ((i = 0; i < $GROUP_NUM; i++))
-do
-  ./script/plain_gen.pl $IFM_LEN ./ifm_temp.dat
-  cat ./ifm_temp.dat >> ifm.dat
-  ./script/plain_gen.pl $WGT_LEN ./wgt_temp.dat
-  cat ./wgt_temp.dat >> wgt.dat
-done
+# rm -f ifm.dat wgt.dat
+# for ((i = 0; i < $GROUP_NUM; i++))
+# do
+#   ./script/plain_gen.pl $IFM_LEN ./ifm_temp.dat
+#   cat ./ifm_temp.dat >> ifm.dat
+#   ./script/plain_gen.pl $WGT_LEN ./wgt_temp.dat
+#   cat ./wgt_temp.dat >> wgt.dat
+# done
 
 xvlog -f ./filelist_krnl_conv.f      \
       -L xilinx_vip                \
       -d GROUP_NUM=$GROUP_NUM \
+      -d CI=$CI \
+      -d CO=$CO \
+      -d IW=$IW \
       --sv # -d DUMP_WAVEFORM
       
 xelab tb_krnl_acc glbl     \

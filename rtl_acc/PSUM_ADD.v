@@ -8,6 +8,7 @@ module PSUM_ADD #(
     parameter data_width = 25
 ) (
     input clk,
+    input stall,
     input rst_n,
     input signed [data_width-1:0] pe0_data,
     input signed [data_width-1:0] pe1_data,
@@ -29,7 +30,7 @@ module PSUM_ADD #(
             psum1 <= 0;
             psum2 <= 0;
             out_r   <= 0;
-        end else begin
+        end else if(!stall) begin
             psum0 <= pe0_data + pe1_data;
             psum1 <= pe2_data;
             psum2 <= psum0 + psum1;
