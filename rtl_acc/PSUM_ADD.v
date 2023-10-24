@@ -5,7 +5,7 @@
 `timescale 1ns/1ps
 
 module PSUM_ADD #(
-    parameter data_width = 25
+    parameter data_width = 32
 ) (
     input clk,
     input stall,

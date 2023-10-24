@@ -2,7 +2,9 @@
 
 module PE_FSM #(
     parameter K = 3,
-    parameter T = 16
+    parameter T = 14,
+    parameter S = 64,
+    parameter P = 1
 ) (
     input clk,
     input stall,
@@ -51,7 +53,7 @@ module PE_FSM #(
 
     parameter [2:0] IDLE = 3'b000, S1 = 3'b001, S2 = 3'b010, FINISH = 3'b100;
 
-    parameter [6:0] tile_length = 16;
+    parameter [6:0] tile_length = 14;
 
     always @(posedge clk or negedge rst_n)
         if (!rst_n) current_state <= IDLE;
@@ -64,8 +66,8 @@ module PE_FSM #(
         end else if (start_conv) begin
             // ci <= ((cfg_ci + 6'b000001) << 3);
             // co <= ((cfg_co + 6'b000001) << 3);
-            ci <= ((cfg_ci + 1) << 3);
-            co <= ((cfg_co + 1) << 3);
+            ci <= (((cfg_ci + 1) << 3)/P);
+            co <= (((cfg_co + 1) << 3)/P);
         end
     end
 
@@ -73,7 +75,7 @@ module PE_FSM #(
         next_state = 3'bx;
         case (current_state)
             IDLE:
-            if (start_again && cnt1 == 0 && cnt2 == 0 && cnt3 == tile_num)
+            if (start_again && cnt1 == 0 && cnt2 == 0 && cnt3 == tile_num/S)
                 next_state = FINISH;
             else if (start_again) next_state = S1;
             else next_state = IDLE;
@@ -138,7 +140,7 @@ module PE_FSM #(
                         else cnt2 <= cnt2 + 1;
 
                         if (cnt2 == 0)
-                            if (cnt3 == tile_num) cnt3 <= 0;
+                            if (cnt3 == tile_num/S) cnt3 <= 0;
                             else cnt3 <= cnt3 + 1;
                         else cnt3 <= cnt3;
                     end else cnt2 <= cnt2;

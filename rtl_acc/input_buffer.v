@@ -29,6 +29,7 @@ module input_buffer #(
 
     input pop_req,
     output [DATA_WIDTH-1:0] o_data,
+    output o_data_v,
 
     input g_stall,
 
@@ -104,13 +105,13 @@ module input_buffer #(
     end
 
 
-    assign in_fifo0_pop_req   = !g_stall & pop_req;
+    assign in_fifo0_pop_req   = !g_stall & pop_req & !in_fifo0_empty;
     assign in_fifo0_push_data = tdata;
 
     reg [511:0] r_o_data;
     reg [511:0] bypass_input;
     reg bypass_flag;
-
+    reg r_o_data_v;
 
     always @(posedge clk, negedge rst_n) begin
         if (!rst_n) begin
@@ -132,9 +133,10 @@ module input_buffer #(
 
     always @(*) begin
         r_o_data <= bypass_flag ? bypass_input : in_fifo0_pop_data;
+        r_o_data_v = (!stall || bypass_flag) && pop_req;
     end
     assign o_data = r_o_data;
-
+    assign o_data_v = r_o_data_v;
     reg rmst_rised;
     reg [31:0] addr_cnt;
 

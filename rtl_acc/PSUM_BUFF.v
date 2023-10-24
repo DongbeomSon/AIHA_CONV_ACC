@@ -4,7 +4,7 @@
 `timescale 1ns/1ps
 
 module PSUM_BUFF #(
-    parameter data_width = 25,
+    parameter data_width = 32,
     parameter addr_width = 8,
     parameter depth      = 61
 ) (

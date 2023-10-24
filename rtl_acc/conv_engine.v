@@ -17,10 +17,11 @@ module conv_engine #(
     parameter WGT_BUFF_ADDR_WIDTH = $clog2(WGT_BUFF_WORD_NUM) + 1,
 
 
-    parameter OUT_DATA_WIDTH = 25,
-    parameter T = 16,  //Tile_length
-    parameter R = 5,    //ROW
-    parameter S = 1,    //parallelize channel_output
+    parameter OUT_DATA_WIDTH = 32,
+    parameter OUT_PORT_WIDTH = 512,
+    parameter T = 14,  //Tile_length
+    parameter R = 14,    //ROW
+    parameter S = 64,    //parallelize channel_output
     parameter P = 1,    //parallelize channel_input
     parameter K = 3     //kernel size
 ) (
@@ -103,6 +104,7 @@ module conv_engine #(
 
     wire wrapped_ifm_req;
     wire [WIFM_DATA_WIDTH-1:0] wrapped_ifm;
+    wire wrapped_ifm_v;
     wire ifm_buf_rdy;
 
     wire ifm_read;
@@ -113,7 +115,7 @@ module conv_engine #(
     wire ifm_stall;
     wire wgt_stall;
     wire ofm_stall;
-
+    wire wgt_input_stall;
 
     wire g_stall = ifm_stall | wgt_stall | ofm_stall;
 
@@ -146,6 +148,7 @@ module conv_engine #(
 
         .pop_req(wrapped_ifm_req),
         .o_data (wrapped_ifm),
+        .o_data_v(wrapped_ifm_v),
 
         .op_start(p_op_start),
         .end_conv(end_conv),
@@ -159,6 +162,7 @@ module conv_engine #(
 
     wire wrapped_wgt_req;
     wire [WWGT_DATA_WIDTH-1:0] wrapped_wgt;
+    wire wrapped_wgt_v;
     wire wgt_buf_rdy;
 
     input_buffer #(
@@ -185,16 +189,17 @@ module conv_engine #(
 
         .pop_req(wrapped_wgt_req),
         .o_data (wrapped_wgt),
+        .o_data_v(wrapped_wgt_v),
 
         .addr_offset(wgt_offset),
 
         .op_start(p_op_start),
         .end_conv(end_conv),
 
-        .g_stall(g_stall),
+        .g_stall(0),
         .xfer_clear(wgt_xfer_clear),
 
-        .stall(wgt_stall)
+        .stall(wgt_input_stall)
     );
 
     wire start_conv = ifm_buf_rdy & wgt_buf_rdy;
@@ -211,9 +216,9 @@ module conv_engine #(
         end
     end
 
-    wire [55:0] ifm;
+    wire [127:0] ifm;
     new_parser #(
-        .OUTPUT_WIDTH(56)
+        .OUTPUT_WIDTH(128)
     ) ifm_parser (
         .clk  (clk),
         .rst_n(rst_n),
@@ -229,25 +234,34 @@ module conv_engine #(
     );
 
 
-    wire [23:0] wgt;
-    new_parser #(
-        .OUTPUT_WIDTH(24)
-    ) wgt_parser (
-        .clk  (clk),
-        .rst_n(rst_n),
+    wire [1535:0] wgt;
+    wgt_resizebuffer #(.INPUT_WIDTH(512), .OUTPUT_WIDTH(1536)) wgt_resizebuffer(
+        .clk    (clk),
+        .rst_n  (rst_n),
+        .fm     (wrapped_wgt),
+        .wgt_read (wgt_read),
 
-        .fm      (wrapped_wgt),
-        .ifm_read(wgt_read),
-        //       .init_word  (start_conv_pulse),
+        .g_stall (g_stall),
+        .valid_input (wrapped_wgt_v),
 
-        .parse_out(wgt),
-        .input_req(wrapped_wgt_req),
+        .op_start(p_op_start),
+        .end_conv(end_conv),
 
-        .stall(g_stall)
+        .parse_out (wgt),
+        .input_req (wrapped_wgt_req),
+        .stall(wgt_stall)
     );
 
-    wire [24:0] ofm_port0;
-    wire [24:0] ofm_port1;
+    wire [OUT_PORT_WIDTH-1:0] ofm_port0;
+    wire [OUT_PORT_WIDTH-1:0] ofm_port1;
+    wire [OUT_PORT_WIDTH-1:0] ofm_port2;
+    wire [OUT_PORT_WIDTH-1:0] ofm_port3;
+    
+    wire ofm_port_v0;
+    wire ofm_port_v1;
+    wire ofm_port_v2;
+    wire ofm_port_v3;
+
 
     reg r_op_start;
     always @(posedge clk, negedge rst_n) begin
@@ -281,10 +295,14 @@ module conv_engine #(
         .tile_num(tile_num),
         .ifm(ifm),
         .weight(wgt),
-        .ofm_port0(ofm_port0),
-        .ofm_port1(ofm_port1),
-        .ofm_port0_v(ofm_port0_v),
-        .ofm_port1_v(ofm_port1_v),
+        .out_ofm_port0(ofm_port0),
+        .out_ofm_port1(ofm_port1),
+        .out_ofm_port2(ofm_port2),
+        .out_ofm_port3(ofm_port3),
+        .out_ofm_port_v0(ofm_port_v0),
+        .out_ofm_port_v1(ofm_port_v1),
+        .out_ofm_port_v2(ofm_port_v2),
+        .out_ofm_port_v3(ofm_port_v3),
         .ifm_read(ifm_read),
         .wgt_read(wgt_read),
         .end_op(end_conv),
@@ -321,11 +339,16 @@ module conv_engine #(
         .rst_n(rst_n),
         .g_stall(g_stall),
 
-        .ofm_port0_v(ofm_port0_v),
-        .ofm_port1_v(ofm_port1_v),
+        .out_ofm_port_v0(ofm_port_v0),
+        .out_ofm_port_v1(ofm_port_v1),
+        .out_ofm_port_v2(ofm_port_v2),
+        .out_ofm_port_v3(ofm_port_v3),
 
-        .ofm_port0(ofm_port0),
-        .ofm_port1(ofm_port1),
+        .out_ofm_port0(ofm_port0),
+        .out_ofm_port1(ofm_port1),
+        .out_ofm_port2(ofm_port2),
+        .out_ofm_port3(ofm_port3),
+        
         .op_start (p_op_start),
         .end_conv (end_conv),
         .ofm_size (r_ofm_size),

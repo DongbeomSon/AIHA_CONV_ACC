@@ -7,11 +7,11 @@
 
 `timescale 1ns/1ps
 
-// `define CI 0
-// `define CO 0
-`define TI 16
-`define ROW 5
-`define WIDTH 64
+`define CI 7
+`define CO 7
+`define TI 14
+`define ROW 14
+`define WIDTH 112
 `define KK 3
 `define TI_FACTOR int'((`IW-`KK+1+`TI-1)/`TI)
 `define ROW_FACTOR int'((`IW-`KK+1+`ROW-1)/`ROW)
@@ -24,11 +24,11 @@
 `define IFM_LEN_WORD `IFM_LEN/64
 `define WGT_LEN_WORD `WGT_LEN/64
 
-`define BUF_DEPTH 62
+`define BUF_DEPTH 112
 `define OFM_C `CFG_CO
 `define OFM_H `IW-`KK+1
 `define OFM_W `IW-`KK+1
-`define OUT_DATA_WIDTH 25
+`define OUT_DATA_WIDTH 32
 
 //`define OFM_LEN `OFM_H*`OFM_W*`CFG_CO*4
 `define OFM_LEN int'(4*`TI_FACTOR*`ROW_FACTOR*`CFG_CO*`TI*`ROW)
@@ -479,6 +479,8 @@ end
     integer toc;
     integer toh;
     integer tow;
+    integer th;
+    integer ow;
     reg stop_flag;
 
 initial  begin : main_test_routine
@@ -506,11 +508,11 @@ initial  begin : main_test_routine
     int oc, oh, tw, index;
     int thcnt;
 
-    int ifm_size = `IFM_LEN;
-    int wgt_size = `WGT_LEN;
-    int ofm_size = `OFM_LEN;
-    int tile_num = `TILE_NUM;
-    int ofm_len_word = `OFM_LEN_WORD;
+    static int ifm_size = `IFM_LEN;
+    static int wgt_size = `WGT_LEN;
+    static int ofm_size = `OFM_LEN;
+    static int tile_num = `TILE_NUM;
+    static int ofm_len_word = `OFM_LEN_WORD;
 
 //    file_ptr = $fopen("./script/test/ifm.dat", "rb");
 //    file_ptr = $fopen("../common/ifm.dat", "rb");
@@ -573,34 +575,27 @@ initial  begin : main_test_routine
                   toh = 0;
                   tow = 0;
                   oc = 0;
-                  oh = 0;
-                  tw = 0;
+                  th = 0;
+                  ow = 0;
                   thcnt = 0;
-                  for(index = 0; index < `OFM_LEN_WORD; index++) begin
-                    for(i = 0; i < 16; i=i+1) begin
-//                      ofm[oc][oh][i+tw*`TI] = ofm_data[`OFM_LEN_WORD*j + index][32*(i+1)-1 -: 32];
-                      for(k = 0; k < 4; k=k+1)begin
-                        if((oh < `OFM_H) & (i+tw*`TI < `OFM_W))
-                          ofm[oc][oh][i+tw*`TI][k*8 +: 8] = ofm_data[ofm_len_word*j + index][(32*(15-i)+(3-k)*8) +: 8];
+
+                  for(toh=0; toh<8; toh = toh+1) begin  
+                    for(ow=0; ow<112; ow=ow+1) begin
+                      for(th=0; th<14; th=th+1) begin
+                        for(i = 0; i < 16; i=i+1) begin
+                          for(k = 0; k < 4; k=k+1) begin
+                            ofm[i][th+toh*14][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index][(32*(i)+(3-k)*8) +: 8];
+                            ofm[i+16][th+toh*14][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index+1][(32*(i)+(3-k)*8) +: 8];
+                            ofm[i+32][th+toh*14][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index+2][(32*(i)+(3-k)*8) +: 8];
+                            ofm[i+48][th+toh*14][ow][k*8 +: 8] = ofm_data[`OFM_LEN_WORD*j + index+3][(32*(i)+(3-k)*8) +: 8];
+                          end
+                        end
+                        index = index + 4;
                       end
                     end
-                    oh = oh + 1;
-                    thcnt = thcnt + 1;
-                          if (thcnt == `ROW) begin
-                              thcnt = 0;
-                              tw = tw + 1;
-                              oh = oh - `ROW;
-                              if (tw == `TI_FACTOR) begin
-                                  tw = 0;
-                                  oh = oh + `ROW;
-                              end
-                          end
-                          if (oh == `ROW * `ROW_FACTOR) begin
-                              oh = 0;
-                              oc = oc + 1;
-                              $display("\033[33m[ConvKernel: ] Computing channel: %d\033[0m", oc);
-                          end
-                  end
+                   end
+                 $display("\033[33m[ConvKernel: ] Computing channel: %d\033[0m", oc);
+
 
                   for (toc=0; toc < `OFM_C; toc = toc + 1) begin
                       $fwrite(fp_w, "\n\n");

@@ -24,11 +24,11 @@ module PE (
     input signed [7:0] wgt_input1;
     input signed [7:0] wgt_input2;
 
-    output signed [24:0] p_sum;
+    output signed [31:0] p_sum;
 
     reg signed [15:0] product[3:0];
     reg signed [16:0] pp_sum[1:0];
-    reg signed [24:0] p_sum;
+    reg signed [31:0] p_sum;
 
 
     integer i;

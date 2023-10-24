@@ -1,6 +1,6 @@
 module new_parser #(
     parameter INPUT_WIDTH  = 512,
-    parameter OUTPUT_WIDTH = 56
+    parameter OUTPUT_WIDTH = 128
 ) (
     input clk,
     input rst_n,
@@ -107,12 +107,12 @@ module new_parser #(
                     end
 
                 end else begin
-                    if (cnt == MAX_CNT - 3) begin
+                    if (cnt == MAX_CNT - 2) begin
                         r_input_req <= 1;
                     end else begin
                         r_input_req <= 0;
                     end
-                    if (cnt == MAX_CNT - 2) begin
+                    if (cnt == MAX_CNT - 1) begin
                         cnt <= 0;
                         mux_sel <= (mux_sel << REMAIN_BYTE) | (mux_sel >> (MUX_LEN-REMAIN_BYTE));
                         shift_cnt <= shift_cnt + REMAIN_BYTE >= REQ_BYTE ? shift_cnt + REMAIN_BYTE - REQ_BYTE : shift_cnt + REMAIN_BYTE;
