@@ -8,7 +8,16 @@ import torch.nn.functional as F
 group_num = sys.argv[1]
 group_num = int(group_num)
 
-if len(sys.argv) != 2:
+cfg_ci = sys.argv[2]
+cfg_ci = int(cfg_ci)
+
+cfg_co = sys.argv[3]
+cfg_co = int(cfg_co)
+
+input_width = sys.argv[4]
+input_width = int(input_width)
+
+if len(sys.argv) != 5:
     print("Insufficient arguments")
     sys.exit()
     
@@ -18,18 +27,23 @@ if type(group_num) is not int:
 
 print("TB geneartor GROUP_NUM : ", group_num)
 
-ic = 64
-ih = 112
-iw = 112
+gen_txt = True
 
-oc = 64
-oh = 112
-ow = 112
+# ic = 128
+ic = (cfg_ci+1)*8
+ih = input_width
+iw = input_width
+
+oc = (cfg_co+1)*8
+oh = input_width
+ow = input_width
 
 kk = 3
 
+tile_length = 14
 pe_row = 14
 
+tile_col = math.ceil(oh/tile_length)
 tile_row = math.ceil(oh/pe_row)
 
 conv2d = nn.Conv2d(in_channels=ic, out_channels=oc, kernel_size=kk, padding=1, bias=False)
@@ -93,70 +107,28 @@ for x in ofm_relu:
 
 # write data as a 2's complement binary representation type
 
-tile_length = 14
-num_tile = 114//tile_length
-
-ifm_num = 0
-with open("ifm.txt", "w") as f:
-    for ifm_np in ifm_np_l:
-        for ii in range(tile_row):
-            for jj in range(num_tile):
-                for c in range(ic):
-                    for j in range(tile_length + 2):
-                        col = jj*tile_length + j
-                        for i in range(16):
-                            row = ii*14+i
-                            # print(row, c, ii)
-                            k = ifm_np[0, c, row, col]
-                            s = str(k) + " "
-                            f.write(s)
-                    f.write("\n")    
-                f.write("\n")    
-            f.write("\n")
-        f.write("\n")
-    
-    
+ifm_num = 0    
 # byte write
 with open("ifm.dat", "wb") as f:
     for ifm_np in ifm_np_l:
         for ii in range(tile_row):
-            for jj in range(num_tile):
+            for jj in range(tile_col):
                 for c in range(ic):
-                    for j in range(tile_length + 2):
+                    for j in range(tile_length + kk-1):
                         col = jj*tile_length + j
-                        for i in range(16):
-                            row = ii*14+i
+                        for i in range(tile_row + kk-1):
+                            row = ii*tile_row+i
                             # print(row, c, ii)
-                            k = ifm_np[0, c, row, col]
+                            k = ifm_np[0, c, row, col] if ((row < ih) and (col < ih)) else np.int64(0)
                             f.write(k.astype('int8').tobytes())
                             ifm_num += 1
-    
-    
-
 print("---ifm_num--- %d" % ifm_num)
 ifm_num = 0
-
-with open("wgt.txt", "w") as f:
-    for weight_np in weight_np_l:
-        for ii in range(tile_row):
-            for jj in range(num_tile):
-                for j in range(ic):
-                    for k in range(kk):
-                        for i in range(0, oc , 1):
-                            for l in weight_np[i, j, :, k]:
-                                s = str(l) + " "
-                                f.write(s)
-                        f.write("\n")
-                    f.write("\n")
-                f.write("\n")
-            f.write("\n")
-        f.write("\n")
-        f.write("\n")
 
 with open("wgt.dat", "wb") as f:
     for weight_np in weight_np_l:
         for ii in range(tile_row):
-            for jj in range(num_tile):
+            for jj in range(tile_col):
                 for j in range(ic):
                     for k in range(kk):
                         for i in range(0, oc , 1):
@@ -179,43 +151,88 @@ with open("ofm.txt", "w") as f:
         
 print("---ofm_num--- %d" % ofm)
 
+if gen_txt:
+    
+    with open("ifm.txt", "w") as f:
+        for ifm_np in ifm_np_l:
+            for ii in range(tile_row):
+                for jj in range(tile_col):
+                    for c in range(ic):
+                        for j in range(tile_length + kk-1):
+                            col = jj*tile_length + j
+                            for i in range(tile_row + kk-1):
+                                row = ii*tile_row+i
+                                # print(row, c, ii)
+                                k = ifm_np[0, c, row, col] if ((row < ih) and (col < ih)) else np.int64(0)
+                                s = str(k) + " "
+                                f.write(s)
+                        f.write("\n")    
+                    f.write("\n")    
+                f.write("\n")
+            f.write("\n")
+        
+        
+    x=0
+    s_temp=""
+    with open("ifm_hex.txt", "w") as f:
+        for ifm_np in ifm_np_l:
+            for ii in range(tile_row):
+                for jj in range(tile_col):
+                    for c in range(ic):
+                        for j in range(tile_length + kk-1):
+                            col = jj*tile_length + j
+                            for i in range(tile_row + kk-1):
+                                row = ii*tile_row+i
+                                # print(row, c, ii)
+                                k = ifm_np[0, c, row, col] if ((row < ih) and (col < ih)) else 0
+                                k = k & 0xff
+                                s = format(k, '02x')
+                                s_temp = s+s_temp
+                                #f.write(s)
+                                x += 1
+                                if(x==7):
+                                    x=0
+                                    f.write(s_temp)
+                                    s_temp=""
+                                    f.write("\n")
+            #         f.write("\n")    
+            #     f.write("\n")
+            # f.write("\n")
 
-# #write byte ver
-# with open("ifm_bin.txt", "w") as f:
-#     for ifm_np in ifm_np_l:
-#         for ii in range(13):
-#             for jj in range(num_tile):
-#                 for c in range(ic):
-#                     for j in range(tile_length + 2):
-#                         col = jj*tile_length + j
-#                         for i in range(8):
-#                             row = ii*5+i
-#                             # print(row, c, ii)
-#                             k = ifm_np[0, c, row, col] if ((row < 64) and (col < 64))else 0
-#                             s = np.binary_repr(k, 8) + " "
-#                             f.write(s)
-#                             ifm_num += 1
-#                         f.write("\n")
-#                 f.write("\n")    
-#             f.write("\n")
-#         f.write("\n")
-
-# print("---ifm_num--- %d" % ifm_num)
-# ifm_num = 0
-
-# with open("wgt_bin.txt", "w") as f:
-#     for weight_np in weight_np_l:
-#         for i in range(oc):
-#             for ii in range(13):
-#                 for jj in range(num_tile):
-#                     for j in range(ic):
-#                         for k in range(kk):
-#                             for l in weight_np[i, j, :, k]:
-#                                 s = np.binary_repr(l, 8) + " "
-#                                 f.write(s)
-#                                 ifm_num += 1
-#                             f.write("\n")
-#                         f.write("\n")
-#                     f.write("\n")
-#                 f.write("\n")
-#             f.write("\n")
+    with open("wgt.txt", "w") as f:
+        for weight_np in weight_np_l:
+            for ii in range(tile_row):
+                for jj in range(tile_col):
+                    for j in range(ic):
+                        for k in range(kk):
+                            for i in range(0, oc, 1):
+                                for l in weight_np[i, j, :, k]:
+                                    s = str(l) + " "
+                                    f.write(s)
+                            f.write("\n")
+                        f.write("\n")
+                    f.write("\n")
+                f.write("\n")
+            f.write("\n")
+            f.write("\n")
+        
+    x=0
+    s_temp=""
+    with open("wgt_hex.txt", "w") as f:
+        for weight_np in weight_np_l:
+            for ii in range(tile_row):
+                for jj in range(tile_col):
+                    for j in range(ic):
+                        for k in range(kk):
+                            for i in range(0, oc, 1):
+                                for l in weight_np[i, j, :, k]:
+                                    # s = np.binary_repr(l, 8) + " "
+                                    t = l & 0xff
+                                    s = format(t, '02x')
+                                    s_temp = s+s_temp
+                                    x += 1
+                                    if(x==3):
+                                        x=0
+                                        f.write(s_temp)
+                                        s_temp=""
+                                        f.write("\n")
