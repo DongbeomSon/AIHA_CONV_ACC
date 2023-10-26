@@ -18,12 +18,17 @@ module conv_engine #(
 
 
     parameter OUT_DATA_WIDTH = 32,
-    parameter OUT_PORT_WIDTH = 512,
     parameter T = 14,  //Tile_length
     parameter R = 14,    //ROW
     parameter S = 64,    //parallelize channel_output
     parameter P = 1,    //parallelize channel_input
-    parameter K = 3     //kernel size
+    parameter K = 3,     //kernel size
+    parameter OUT_PORT_WIDTH = OUT_DATA_WIDTH * S,
+
+
+    parameter WGT_WRAP_SIZE = 8*S*K,
+    parameter IFM_SIZE = 8*(R+K-1),
+    parameter WGT_SIZE = 8*K*S
 ) (
     input clk,
     input rst_n,
@@ -116,6 +121,7 @@ module conv_engine #(
     wire wgt_stall;
     wire ofm_stall;
     wire wgt_input_stall;
+    wire wgt_fifo_full;
 
     wire g_stall = ifm_stall | wgt_stall | ofm_stall;
 
@@ -196,7 +202,7 @@ module conv_engine #(
         .op_start(p_op_start),
         .end_conv(end_conv),
 
-        .g_stall(0),
+        .g_stall(wgt_fifo_full),
         .xfer_clear(wgt_xfer_clear),
 
         .stall(wgt_input_stall)
@@ -216,9 +222,9 @@ module conv_engine #(
         end
     end
 
-    wire [127:0] ifm;
+    wire [IFM_SIZE-1:0] ifm;
     new_parser #(
-        .OUTPUT_WIDTH(128)
+        .OUTPUT_WIDTH(IFM_SIZE)
     ) ifm_parser (
         .clk  (clk),
         .rst_n(rst_n),
@@ -234,8 +240,8 @@ module conv_engine #(
     );
 
 
-    wire [1535:0] wgt;
-    wgt_resizebuffer #(.INPUT_WIDTH(512), .OUTPUT_WIDTH(1536)) wgt_resizebuffer(
+    wire [WGT_WRAP_SIZE-1:0] wgt;
+    wgt_resizebuffer #(.INPUT_WIDTH(512), .OUTPUT_WIDTH(WGT_WRAP_SIZE)) wgt_resizebuffer(
         .clk    (clk),
         .rst_n  (rst_n),
         .fm     (wrapped_wgt),
@@ -249,19 +255,13 @@ module conv_engine #(
 
         .parse_out (wgt),
         .input_req (wrapped_wgt_req),
-        .stall(wgt_stall)
+        .stall(wgt_stall),
+        .wgt_fifo_full(wgt_fifo_full)
     );
 
-    wire [OUT_PORT_WIDTH-1:0] ofm_port0;
-    wire [OUT_PORT_WIDTH-1:0] ofm_port1;
-    wire [OUT_PORT_WIDTH-1:0] ofm_port2;
-    wire [OUT_PORT_WIDTH-1:0] ofm_port3;
+    wire [OUT_PORT_WIDTH-1:0] ofm_port;
     
-    wire ofm_port_v0;
-    wire ofm_port_v1;
-    wire ofm_port_v2;
-    wire ofm_port_v3;
-
+    wire ofm_port_v;
 
     reg r_op_start;
     always @(posedge clk, negedge rst_n) begin
@@ -282,7 +282,6 @@ module conv_engine #(
         .T(T),
         .R(R),
         .S(S),
-        .P(P),
         .K(K)
 
     ) conv_acc (
@@ -295,14 +294,8 @@ module conv_engine #(
         .tile_num(tile_num),
         .ifm(ifm),
         .weight(wgt),
-        .out_ofm_port0(ofm_port0),
-        .out_ofm_port1(ofm_port1),
-        .out_ofm_port2(ofm_port2),
-        .out_ofm_port3(ofm_port3),
-        .out_ofm_port_v0(ofm_port_v0),
-        .out_ofm_port_v1(ofm_port_v1),
-        .out_ofm_port_v2(ofm_port_v2),
-        .out_ofm_port_v3(ofm_port_v3),
+        .ofm_port(ofm_port),
+        .ofm_port_v(ofm_port_v),
         .ifm_read(ifm_read),
         .wgt_read(wgt_read),
         .end_op(end_conv),
@@ -334,24 +327,51 @@ module conv_engine #(
     wire write_xfer_wait;
     assign write_buffer_wait = !write_xfer_wait & ifm_xfer_clear & wgt_xfer_clear;
 
-    flatter ofm_flat (
+    // flatter ofm_flat (
+    //     .clk(clk),
+    //     .rst_n(rst_n),
+    //     .g_stall(g_stall),
+
+    //     .out_ofm_port_v0(ofm_port_v0),
+    //     .out_ofm_port_v1(ofm_port_v1),
+    //     .out_ofm_port_v2(ofm_port_v2),
+    //     .out_ofm_port_v3(ofm_port_v3),
+
+    //     .out_ofm_port0(ofm_port0),
+    //     .out_ofm_port1(ofm_port1),
+    //     .out_ofm_port2(ofm_port2),
+    //     .out_ofm_port3(ofm_port3),
+        
+    //     .op_start (p_op_start),
+    //     .end_conv (end_conv),
+    //     .ofm_size (r_ofm_size),
+
+    //     .tdata(axis_mst_ofm_tdata),
+    //     .ready(axis_mst_ofm_tready),
+    //     .valid(axis_mst_ofm_tvalid),
+
+    //     .wmst_offset(r_ofm_addr_base),
+    //     .wmst_done(ofm_done),
+    //     .wmst_req(ofm_req),
+    //     .wmst_addr(ofm_offset),
+    //     .wmst_xfer_size(ofm_xfer_size),
+    //     .write_buffer_wait(write_xfer_wait),
+
+    //     .stall(ofm_stall)
+    // );
+
+    ofm_parser #(.R(R), .S(S)) ofm_parser(
         .clk(clk),
         .rst_n(rst_n),
         .g_stall(g_stall),
 
-        .out_ofm_port_v0(ofm_port_v0),
-        .out_ofm_port_v1(ofm_port_v1),
-        .out_ofm_port_v2(ofm_port_v2),
-        .out_ofm_port_v3(ofm_port_v3),
+        .op_start(op_start),
+        .ofm_port_v(ofm_port_v),
+        .ofm_port(ofm_port),
 
-        .out_ofm_port0(ofm_port0),
-        .out_ofm_port1(ofm_port1),
-        .out_ofm_port2(ofm_port2),
-        .out_ofm_port3(ofm_port3),
-        
-        .op_start (p_op_start),
-        .end_conv (end_conv),
-        .ofm_size (r_ofm_size),
+        .ofm_size(r_ofm_size),
+
+        .end_conv(end_conv),
 
         .tdata(axis_mst_ofm_tdata),
         .ready(axis_mst_ofm_tready),
@@ -366,8 +386,6 @@ module conv_engine #(
 
         .stall(ofm_stall)
     );
-
-    assign ofm_xfer_addr = wmst_addr;
 
     // control signals registering
     always @(posedge clk, negedge rst_n) begin
@@ -399,27 +417,6 @@ module conv_engine #(
         end
     end
 
-
-    // // ILA monitoring combinatorial adder
-    // ila_0 i_ila_0 (
-    // 	.clk(clk),              // input wire        clk
-    // 	.probe0(op_start),           // input wire [0:0]  probe0  
-    // 	.probe1(r_ifm_addr_base), // input wire [63:0]  probe1 
-    // 	.probe2(r_wgt_addr_base),   // input wire [63:0]  probe2 
-    // 	.probe3(r_ofm_addr_base),    // input wire [63:0] probe3 
-    //     .probe4(ifm_req),      // input wire [0:0] probe4
-    //     .probe5(wgt_req),       // input wire [0:0] probe5
-    //     .probe6(ofm_req),       // input wire [0:0] probe6
-    //     .probe7(ifm_offset),    // input wire [63:0] probe7
-    //     .probe8(wgt_offset),    // input wire [63:0] probe8
-    //     .probe9(ofm_offset),    // input wire [63:0] probe9
-    //     .probe10(ifm_xfer_clear),   // input wire [0:0] probe10
-    //     .probe11(wgt_xfer_clear),   // input wire [0:0] probe11
-    //     .probe12(wrapped_ifm),      // input wire [511:0] probe12
-    //     .probe13(wrapped_wgt)       // input wire [511:0] probe13
-    // );
-
-
     //counter
     reg [31:0] run_cycle;
     reg [31:0] ifm_stall_cnt;
@@ -449,32 +446,7 @@ module conv_engine #(
             ofm_cycle <= 0;
             flag_op_start <= 0;
             flag_end_conv <= 0;
-            // flag_ifm <= 0;
-            // flag_wgt <= 0;
-            // flag_ofm <= 0;
         end else begin
-            // if (flag_op_start) begin
-            //     if (ifm_req) begin
-            //         flag_ifm <= 1;
-            //     end else if (ifm_done) begin
-            //         flag_ifm <= 0;
-            //     end
-
-            //     if (wgt_req) begin
-            //         flag_wgt <= 1;
-            //     end else if (wgt_done) begin
-            //         flag_wgt <= 0;
-            //     end
-
-            //     if (ofm_req) begin
-            //         flag_ofm <= 1;
-            //     end else if (ofm_done) begin
-            //         flag_ofm <= 0;
-            //     end
-            // end
-
-
-
             if (op_start) begin
                 flag_op_start <= 1;
                 run_cycle <= 0;

@@ -26,6 +26,7 @@ module new_parser #(
     parameter integer REQ_BYTE = OUTPUT_WIDTH / 8;
     parameter integer REMAIN_BYTE = 64 % REQ_BYTE;
     parameter integer MUX_LEN = 2 * REQ_BYTE;
+    parameter integer FLAG_REMAIN = (REMAIN_BYTE == 0);
 
     wire [EXTEND_WIDTH-1:0] append_fm = {{APPEND{1'b0}}, fm};
 
@@ -107,12 +108,12 @@ module new_parser #(
                     end
 
                 end else begin
-                    if (cnt == MAX_CNT - 2) begin
+                    if (cnt == MAX_CNT - 3 + FLAG_REMAIN) begin
                         r_input_req <= 1;
                     end else begin
                         r_input_req <= 0;
                     end
-                    if (cnt == MAX_CNT - 1) begin
+                    if (cnt == MAX_CNT - 2 + FLAG_REMAIN) begin
                         cnt <= 0;
                         mux_sel <= (mux_sel << REMAIN_BYTE) | (mux_sel >> (MUX_LEN-REMAIN_BYTE));
                         shift_cnt <= shift_cnt + REMAIN_BYTE >= REQ_BYTE ? shift_cnt + REMAIN_BYTE - REQ_BYTE : shift_cnt + REMAIN_BYTE;

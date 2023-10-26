@@ -24,6 +24,8 @@
 ./rtl_acc/switch_buffer.v
 ./rtl_acc/conv_engine.v
 ./rtl_acc/wgt_resizebuffer.v
+./rtl_acc/ofm_parser.v
+./rtl_acc/parser.v
 
 ./ip_generation/axi_vip_mst/sim/axi_vip_mst_pkg.sv
 ./ip_generation/axi_vip_mst/sim/axi_vip_mst.sv

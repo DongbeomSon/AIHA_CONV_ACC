@@ -66,8 +66,8 @@ module PE_FSM #(
         end else if (start_conv) begin
             // ci <= ((cfg_ci + 6'b000001) << 3);
             // co <= ((cfg_co + 6'b000001) << 3);
-            ci <= (((cfg_ci + 1) << 3)/P);
-            co <= (((cfg_co + 1) << 3)/P);
+            ci <= (((cfg_ci + 1) << 3));
+            co <= (((cfg_co + 1) << 3));
         end
     end
 

@@ -28,14 +28,17 @@ add_files -norecurse \
                             ../rtl_acc/WGT_BUF.v  \
                             ../rtl_acc/PE_FSM.v   \
                             ../rtl_acc/CONV_ACC.v  \
+                            ../rtl_acc/input_buffer.v\
                             ../rtl_acc/acc_eng_ctrl.v \
                             ../rtl_acc/Flatter.v \
-                            ../rtl_acc/input_buffer.v \
                             ../rtl_acc/krnl_acc_axi_ctrl_slave.v \
                             ../rtl_acc/krnl_acc.v \
                             ../rtl_acc/new_parser.v \
                             ../rtl_acc/switch_buffer.v \
                             ../rtl_acc/conv_engine.v \
+                            ../rtl_acc/wgt_resizebuffer.v \
+                            ../rtl_acc/parser.v \
+                            ../rtl_acc/ofm_parser.v \
        }
 
 

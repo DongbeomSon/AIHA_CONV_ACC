@@ -2,12 +2,10 @@ module input_buffer #(
     parameter DATA_WIDTH = 512,
     parameter DATA_WIDTH_BYTE = DATA_WIDTH / 8,
     parameter DATA_NUM = 64,  //eqeaul to burst len
-    //    parameter DATA_NUM_BYTE = 63232,
     parameter FIFO_ADDR_WIDTH = 7,
     parameter BURST_LENGTH = 64,
     parameter BURST_LENGTH_BYTE = DATA_WIDTH_BYTE * BURST_LENGTH,
     parameter TEST_BYTE = 63232
-    //    parameter INIT_LOOP = DATA_NUM_BYTE/DATA_NUM/BURST_LENGTH
 ) (
     input clk,
     input rst_n,
@@ -38,22 +36,10 @@ module input_buffer #(
 
     output xfer_clear,
 
-    //   output reg buf_rdy,
     output stall
 );
 
     wire [31:0] data_byte = input_byte + {20'b0, addr_base[11:0]};
-
-    // reg [31:0] read_num;
-    // reg final_read;
-    // reg [31:0] final_read_num;
-    // reg [31:0] final_xfer_size;
-    // always @(*) begin
-    //     read_num <= data_byte / BURST_LENGTH_BYTE;
-    //     final_read_num <= (data_byte % BURST_LENGTH_BYTE) / DATA_WIDTH_BYTE;
-    //     final_read <= |final_read_num;
-    //     final_xfer_size <= data_byte % BURST_LENGTH_BYTE;
-    // end
 
     wire in_fifo0_full;
     wire in_fifo0_empty;
@@ -88,11 +74,7 @@ module input_buffer #(
         .DATA_CNT(in_fifo0_data_cnt)
     );
     reg r_pop_req;
-    // assign in_fifo0_push_req = buf_rdy ? pop_req : valid & ready;
-    // reg [31:0] align_addr_cnt;
     assign ready = !in_fifo0_full;
-    // wire addr_aligning = |align_addr_cnt;
-    //!addr_aligning & 
     assign in_fifo0_push_req = r_op_start & valid & ready;
 
 
@@ -133,7 +115,8 @@ module input_buffer #(
 
     always @(*) begin
         r_o_data <= bypass_flag ? bypass_input : in_fifo0_pop_data;
-        r_o_data_v = (!stall || bypass_flag) && pop_req;
+        // r_o_data_v = (!stall || bypass_flag) && pop_req;
+        r_o_data_v = !stall && pop_req;
     end
     assign o_data = r_o_data;
     assign o_data_v = r_o_data_v;
@@ -142,37 +125,10 @@ module input_buffer #(
 
     reg [63:0] r_addr_offset;
     assign addr_offset = r_addr_offset;
-    // always @(*) begin
-    //     r_addr_offset = addr_cnt * DATA_NUM * BURST_LENGTH + {addr_base[63:12], 12'b0};
-    // end
 
     always @(*) begin
         r_addr_offset = addr_base;
     end
-
-    // always @(posedge clk, negedge rst_n) begin
-    //     if (!rst_n) begin
-    //         addr_cnt  <= 0;
-    //         xfer_size <= BURST_LENGTH_BYTE;
-    //     end else begin
-    //         if (end_conv) begin
-    //             addr_cnt  <= 0;
-    //             xfer_size <= BURST_LENGTH_BYTE;
-    //         end else if (!r_end_conv & rmst_done) begin
-    //             if (addr_cnt == read_num - 1) begin
-    //                 if (final_read) begin
-    //                     addr_cnt  <= addr_cnt + 1;
-    //                     xfer_size <= final_xfer_size;
-    //                 end else begin
-    //                     addr_cnt <= 0;
-    //                 end
-    //             end else begin
-    //                 addr_cnt  <= (addr_cnt == read_num) ? 0 : addr_cnt + 1;
-    //                 xfer_size <= BURST_LENGTH_BYTE;
-    //             end
-    //         end
-    //     end
-    // end
 
     assign xfer_clear = in_fifo0_empty;
 

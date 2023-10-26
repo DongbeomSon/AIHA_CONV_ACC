@@ -9,11 +9,11 @@
 # export CI=0
 # export CO=0
 export GROUP_NUM=$1
-export CI=$7
-export CO=$7
-export TI=$14
-export IW=$114
-export TI_FACTOR=$[IW/$TI]
+export CI=$2
+export CO=$3
+export TI=$5
+export IW=$4
+# export TI_FACTOR=$[$IW/$TI]
 export CFG_CI=$[$[$CI+1] * 8]
 export CFG_CO=$[$[$CO+1] * 8]
 # export IFM_LEN=$[$[$TI+3]*$CFG_CI*$TI_FACTOR*13*8]
@@ -43,6 +43,8 @@ xvlog -f ./filelist_krnl_conv.f      \
       -L xilinx_vip                \
       -d GROUP_NUM=$GROUP_NUM \
       -d IW=$IW \
+      -d CI=$CI \
+      -d CO=$CO \
       --sv # -d DUMP_WAVEFORM
       
 xelab tb_krnl_acc glbl     \

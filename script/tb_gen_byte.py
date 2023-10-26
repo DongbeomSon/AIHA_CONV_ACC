@@ -45,6 +45,10 @@ pe_row = 14
 
 tile_col = math.ceil(oh/tile_length)
 tile_row = math.ceil(oh/pe_row)
+print("dat,")
+print(tile_col)
+print(tile_row)
+print(input_width)
 
 conv2d = nn.Conv2d(in_channels=ic, out_channels=oc, kernel_size=kk, padding=1, bias=False)
 relu = nn.ReLU(inplace=False)
@@ -116,8 +120,8 @@ with open("ifm.dat", "wb") as f:
                 for c in range(ic):
                     for j in range(tile_length + kk-1):
                         col = jj*tile_length + j
-                        for i in range(tile_row + kk-1):
-                            row = ii*tile_row+i
+                        for i in range(pe_row + kk-1):
+                            row = ii*pe_row+i
                             # print(row, c, ii)
                             k = ifm_np[0, c, row, col] if ((row < ih) and (col < ih)) else np.int64(0)
                             f.write(k.astype('int8').tobytes())
@@ -160,8 +164,8 @@ if gen_txt:
                     for c in range(ic):
                         for j in range(tile_length + kk-1):
                             col = jj*tile_length + j
-                            for i in range(tile_row + kk-1):
-                                row = ii*tile_row+i
+                            for i in range(pe_row + kk-1):
+                                row = ii*pe_row+i
                                 # print(row, c, ii)
                                 k = ifm_np[0, c, row, col] if ((row < ih) and (col < ih)) else np.int64(0)
                                 s = str(k) + " "
@@ -181,8 +185,8 @@ if gen_txt:
                     for c in range(ic):
                         for j in range(tile_length + kk-1):
                             col = jj*tile_length + j
-                            for i in range(tile_row + kk-1):
-                                row = ii*tile_row+i
+                            for i in range(pe_row + kk-1):
+                                row = ii*pe_row+i
                                 # print(row, c, ii)
                                 k = ifm_np[0, c, row, col] if ((row < ih) and (col < ih)) else 0
                                 k = k & 0xff
@@ -190,7 +194,7 @@ if gen_txt:
                                 s_temp = s+s_temp
                                 #f.write(s)
                                 x += 1
-                                if(x==7):
+                                if(x==16):
                                     x=0
                                     f.write(s_temp)
                                     s_temp=""
